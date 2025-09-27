@@ -1,5 +1,5 @@
 ```aiignore
-bot_project/
+DolbaBot/
 │── pyproject.toml        
 │── alembic.ini          
 │── .env                  
