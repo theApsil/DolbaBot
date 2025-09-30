@@ -2,7 +2,13 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv(dotenv_path='.env')
+
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+
+XE_API_USER = os.getenv("XE_API_USER")
+XE_API_KEY = os.getenv("XE_API_KEY")
+
+print(XE_API_USER, XE_API_KEY)
 
 POSTGRES = {
     "user": os.getenv("POSTGRES_USER", "bot_user"),
