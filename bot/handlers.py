@@ -4,6 +4,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from exchanges.base import CurrencyLayerExchange
 from datetime import datetime
+import re
+
 
 exchange = CurrencyLayerExchange()
 
@@ -46,6 +48,13 @@ def register_handlers(app):
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("kurs", kurs_command))
+
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(старт|start)\b", re.IGNORECASE)), start_command))
+    # /помоги или /help
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(помоги|help)\b", re.IGNORECASE)), help_command))
+    # /курс или /kurs (так пользователь может писать и кириллицу, и латиницу)
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(курс|kurs)\b", re.IGNORECASE)), kurs_command))
+
     app.add_handler(CallbackQueryHandler(refresh_callback, pattern=r"^refresh_"))
     # калькулятор: /25-5, /(2+3)*10, /100+50%
     app.add_handler(MessageHandler(filters.Regex(r"^/[^a-zA-Z]"), calc_command))

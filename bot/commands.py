@@ -26,7 +26,17 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # /eurusd 100 или /usdrub 500 или /<expr>
 async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    args = context.args
+    text = update.message.text.strip()
+
+    if context.args and len(context.args) > 0:
+        args = context.args
+    else:
+        parts = text.split(maxsplit=1)
+        if len(parts) > 1:
+            args = parts[1].split()
+        else:
+            args = []
+
     if not args:
         await update.message.reply_text("❌ Укажите валютную пару. Пример: /курс eurusd 100")
         return
@@ -36,6 +46,7 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(pair_clean) < 6:
         await update.message.reply_text("❌ Неверная пара. Пример: EURUSD")
         return
+
     base, quote = pair_clean[:3], pair_clean[3:6]
 
     expr = " ".join(args[1:]) if len(args) > 1 else "1"
@@ -47,7 +58,7 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         result = exchange.convert(base, quote, amount)
-        dt = datetime.utcfromtimestamp(result['timestamp']).strftime("%d.%m %H:%M UTC")
+        dt = datetime.utcfromtimestamp(result["timestamp"]).strftime("%d.%m %H:%M UTC")
 
         msg = (
             f"{result['converted']:.3f} {quote} = ({amount}) {base}\n"
@@ -67,7 +78,7 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         msg,
         reply_markup=reply_markup,
-        disable_web_page_preview=True
+        disable_web_page_preview=True,
     )
 
 
