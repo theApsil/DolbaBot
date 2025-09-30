@@ -12,7 +12,7 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    data = query.data  # refresh_EURUSD_100
+    data = query.data
     _, pair, amount = data.split("_")
     base, quote = pair[:3], pair[3:]
     amount = float(amount)
