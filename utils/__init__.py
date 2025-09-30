@@ -1,5 +1,5 @@
-from utils.calculator import Calculator
+from utils.calculator import evaluate
 
 __all__ = [
-    "Calculator",
+    "evaluate",
 ]
