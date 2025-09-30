@@ -3,16 +3,15 @@ version: "3.8"
 services:
   postgres:
     image: postgres:18
-    container_name: ${PG_HOST}
+    container_name: ${POSTGRES_HOST}
     environment:
-      POSTGRES_USER: ${PG_USERNAME}
-      POSTGRES_PASSWORD: ${PG_PASSWORD}
-      POSTGRES_DB: ${PG_DATABASE}
-      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "${PG_OUTER_PORT}:${PG_INNER_PORT}"
+      - "${POSTGRES_OUTER_PORT}:${POSTGRES_INNER_PORT}"
     volumes:
-      - ./pgdata:/var/lib/postgresql/data/pgdata
+      - postgres_data:/var/lib/postgresql/data
     command: >
       postgres -c max_connections=1000
                -c shared_buffers=256MB
@@ -21,9 +20,9 @@ services:
                -c checkpoint_completion_target=0.7
                -c wal_buffers=16MB
                -c default_statistics_target=100
-               -c port=${PG_INNER_PORT}
+               -c port=${POSTGRES_INNER_PORT}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PG_USERNAME} -d ${PG_DATABASE} -p ${PG_INNER_PORT}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -p ${POSTGRES_INNER_PORT}"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -41,3 +40,7 @@ services:
     volumes:
       - .:/app
     command: python main.py
+
+volumes:
+  postgres_data:
+    driver: local

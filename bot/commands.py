@@ -6,6 +6,8 @@ HELP_TEXT = '''
 /помоги — список команд
 /курс <пара> <сумма> — курс валюты (пример: /курс eurusd 100)
 /eurusd <сумма> — альтернативная запись (пример: /eurusd 50)
+
+лялялляя я Семён Лобанов
 '''
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
