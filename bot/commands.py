@@ -13,6 +13,11 @@ HELP_TEXT = '''
 
 exchange = CurrencyLayerExchange()
 
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("```"
+                                    "🤖 Бот запущен."
+                                    "```", parse_mode="Markdown")
+
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(HELP_TEXT)
 
@@ -67,11 +72,11 @@ async def pair_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = (
             f"{result['converted']:.3f} {quote} = ({amount}) {base}\n"
             f"1 {base} = {result['rate']:.5f} {quote}\n"
-            f"at {dt} [currencylayer.com](https://currencylayer.com)"
+            f"at {dt} currencylayer.com"
         )
 
         keyboard = [
-            [InlineKeyboardButton("🔄 Обновить курс?", callback_data=f"refresh_{base}{quote}_{amount}")]
+            [InlineKeyboardButton("🔄 Обновить курс", callback_data=f"refresh_{base}{quote}_{amount}")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -79,4 +84,8 @@ async def pair_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = f"⚠ Ошибка при получении курса: {e}"
         reply_markup = None
 
-    await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
+    await update.message.reply_text(
+        msg,
+        reply_markup=reply_markup,
+        disable_web_page_preview=True
+    )
