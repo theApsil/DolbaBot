@@ -1,5 +1,5 @@
 from telegram.ext import CommandHandler, MessageHandler, filters, CallbackQueryHandler
-from .commands import help_command , kurs_command, pair_command, start_command, calc_command
+from .commands import help_command , kurs_command, pair_command, start_command, calc_command, kurs_callback
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from exchanges.base import CurrencyLayerExchange
@@ -50,13 +50,12 @@ def register_handlers(app):
     app.add_handler(CommandHandler("kurs", kurs_command))
 
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(старт|start)\b", re.IGNORECASE)), start_command))
-    # /помоги или /help
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(помоги|help)\b", re.IGNORECASE)), help_command))
-    # /курс или /kurs (так пользователь может писать и кириллицу, и латиницу)
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(курс|kurs)\b", re.IGNORECASE)), kurs_command))
 
     app.add_handler(CallbackQueryHandler(refresh_callback, pattern=r"^refresh_"))
-    # калькулятор: /25-5, /(2+3)*10, /100+50%
+    app.add_handler(CallbackQueryHandler(kurs_callback, pattern=r"^refresh_all$"))
+
     app.add_handler(MessageHandler(filters.Regex(r"^/[^a-zA-Z]"), calc_command))
-    # любые команды, включая русские (/курс, /евро)
     app.add_handler(MessageHandler(filters.COMMAND, pair_command))
+
