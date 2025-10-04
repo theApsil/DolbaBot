@@ -12,28 +12,7 @@ _allowed_operators = {
     ast.USub: op.neg,
     ast.UAdd: op.pos,
 }
-
-
-def _ast_eval(node):
-    if isinstance(node, ast.Expression):
-        return _ast_eval(node.body)
-    if isinstance(node, ast.Constant):
-        if isinstance(node.value, (int, float)):
-            return node.value
-        raise ValueError("Недопустимый тип константы")
-    if isinstance(node, ast.BinOp):
-        left = _ast_eval(node.left)
-        right = _ast_eval(node.right)
-        oper = type(node.op)
-        if oper not in _allowed_operators:
-            raise ValueError("Недопустимая операция")
-        return _allowed_operators[oper](left, right)
-    if isinstance(node, ast.UnaryOp):
-        oper = type(node.op)
-        if oper not in _allowed_operators:
-            raise ValueError("Недопустимая унарная операция")
-        return _allowed_operators[oper](_ast_eval(node.operand))
-    raise ValueError("Недопустимый узел в выражении")
+_TOKEN_RE = re.compile(r"\d+\.\d+|\d+|[%\+\-\*\/\(\)]")
 
 
 def safe_compute(expr_str: str) -> float:
@@ -44,7 +23,6 @@ def safe_compute(expr_str: str) -> float:
     return float(_ast_eval(node))
 
 
-_TOKEN_RE = re.compile(r"\d+\.\d+|\d+|[%\+\-\*\/\(\)]")
 
 def tokenize(expr: str):
     return _TOKEN_RE.findall(expr.replace(" ", ""))
@@ -152,6 +130,27 @@ def transform_percent_logic(expr: str) -> str:
         i += 1
 
     return "".join(tokens)
+
+def _ast_eval(node):
+    if isinstance(node, ast.Expression):
+        return _ast_eval(node.body)
+    if isinstance(node, ast.Constant):
+        if isinstance(node.value, (int, float)):
+            return node.value
+        raise ValueError("Недопустимый тип константы")
+    if isinstance(node, ast.BinOp):
+        left = _ast_eval(node.left)
+        right = _ast_eval(node.right)
+        oper = type(node.op)
+        if oper not in _allowed_operators:
+            raise ValueError("Недопустимая операция")
+        return _allowed_operators[oper](left, right)
+    if isinstance(node, ast.UnaryOp):
+        oper = type(node.op)
+        if oper not in _allowed_operators:
+            raise ValueError("Недопустимая унарная операция")
+        return _allowed_operators[oper](_ast_eval(node.operand))
+    raise ValueError("Недопустимый узел в выражении")
 
 
 def evaluate(expression: str) -> float:
