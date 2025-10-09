@@ -4,6 +4,7 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 XE_API_USER = os.getenv("XE_API_USER")
 XE_API_KEY = os.getenv("XE_API_KEY")
+
 CURRENCYLAYER_KEY = os.getenv("CURRENCYLAYER_KEY")
 
 POSTGRES = {
