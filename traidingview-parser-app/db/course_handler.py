@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from .models import Course
 from .database import db_manager
-from datetime import datetime
+from datetime import datetime, timezone
 from services.logger import logger
 
 
@@ -10,7 +10,7 @@ class CourseHandler:
         """Сохранение курса в БД с текущим временем"""
         try:
             session = db_manager.get_session()
-            current_time = datetime.now()
+            current_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
             new_course = Course(
                 date=current_time,
