@@ -19,11 +19,13 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     data = query.data
     dt = datetime.utcnow().strftime("%d.%m %H:%M UTC")
+    r_ask, r_bids = get_courses_from_rapira()
+    g_ask, g_bids = get_courses_from_grinex()
 
+    r_ask = r_ask[5:10]
     # === 1. Обновление всех курсов ===
     if data == "refresh_all":
-        r_ask, r_bids = get_courses_from_rapira()
-        g_ask, g_bids = get_courses_from_grinex()
+
         tv_msg = get_courses_from_tv()
 
         rapira_msg = normalize_rapira_data(r_ask) + f"\n==================\n🇺🇸USDT/RUB: {r_bids}\n"
@@ -49,16 +51,12 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         arg = data.split("_")[1]
 
         if arg == "usdt":
-            r_ask, r_bids = get_courses_from_rapira()
-            g_ask, g_bids = get_courses_from_grinex()
             msg = (
                 f"💵 *КУРС USDT → RUB* _(обновлено {dt})_\n\n"
                 f"*RAPIRA*\n🇺🇸USDT/RUB: {r_bids}\n\n"
                 f"*GRINEX*\n🇺🇸USDT/RUB: {g_bids}"
             )
         elif arg == "rub":
-            r_ask, _ = get_courses_from_rapira()
-            g_ask, _ = get_courses_from_grinex()
             msg = (
                 f"💱 *СТАКАН RUB → USDT* _(обновлено {dt})_\n\n"
                 f"*RAPIRA*\n🇷🇺Цена RUB\t\tОбъём USDT\n{normalize_rapira_data(r_ask)}\n\n"
