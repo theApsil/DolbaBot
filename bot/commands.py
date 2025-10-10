@@ -7,6 +7,8 @@ from exchanges.grinex import get_courses_from_grinex, normalize_grinex_data
 from exchanges.rapira import get_courses_from_rapira, normalize_rapira_data
 from exchanges.traidingview import get_courses_from_tv
 from utils.calculator import evaluate
+from utils.helpers import escape_md
+
 
 exchange = CurrencyLayerExchange()
 
@@ -44,15 +46,16 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         grinex_msg = normalize_grinex_data(g_ask)+ f"\n==================\n🇺🇸USDT/RUB: {g_bids}\n"
 
         msg = (
-            f"📊 КУРСЫ (обновлено {dt})\n\n"
-            f"\bRAPIRA\b - https://rapira.net/exchange/USDT_RUB\n{rapira_msg}\n\n"
-            f"\bGRINEX\b - https://grinex.io/trading/usdta7a5\n{grinex_msg}\n\n"
-            f"\bTRADINGVIEW\b - https://ru.tradingview.com/chart/?symbol=BITHUMB%3AUSDTKRW\n🇰🇷KRW/USDT - {tv_msg}"
+            f"📊 *КУРСЫ* \(обновлено {escape_md(dt)}\)\n\n"
+            f"*RAPIRA* — [ссылка]({escape_md('https://rapira.net/exchange/USDT_RUB')})\n{escape_md(rapira_msg)}\n\n"
+            f"*GRINEX* — [ссылка]({escape_md('https://grinex.io/trading/usdta7a5')})\n{escape_md(grinex_msg)}\n\n"
+            f"*TRADINGVIEW* — [ссылка]({escape_md('https://ru.tradingview.com/chart/?symbol=BITHUMB%3AUSDTKRW')})\n🇰🇷KRW/USDT — {escape_md(tv_msg)}"
         )
 
         keyboard = [[InlineKeyboardButton("🔄 Обновить всё", callback_data="refresh_all")]]
-        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard),
-                                        disable_web_page_preview=True)
+        await update.message.reply_text(msg,
+                                        reply_markup=InlineKeyboardMarkup(keyboard),
+                                        disable_web_page_preview=True, parse_mode="MarkdownV2")
         return
 
     arg = args[0].lower()
@@ -63,12 +66,12 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         g_ask, g_bids = get_courses_from_grinex()
         dt = datetime.utcnow().strftime("%d.%m %H:%M UTC")
         msg = (
-            f"💵 КУРС USDT → RUB (обновлено {dt})\n\n"
-            f"RAPIRA\n🇺🇸USDT/RUB: {r_bids}\n\n"
-            f"GRINEX\n🇺🇸USDT/RUB: {g_bids}"
+            f"💵 *КУРС USDT → RUB* _(обновлено {dt})_\n\n"
+            f"*RAPIRA*\n🇺🇸USDT/RUB: {r_bids}\n\n"
+            f"*GRINEX*\n🇺🇸USDT/RUB: {g_bids}"
         )
         kb = [[InlineKeyboardButton("🔄 Обновить", callback_data="refresh_usdt")]]
-        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb))
+        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode="Markdown")
         return
 
     # === /курс руб ===
@@ -77,21 +80,21 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         g_ask, _ = get_courses_from_grinex()
         dt = datetime.utcnow().strftime("%d.%m %H:%M UTC")
         msg = (
-            f"💱 СТАКАН RUB → USDT (обновлено {dt})\n\n"
-            f"RAPIRA\n{normalize_rapira_data(r_ask)}\n\n"
-            f"GRINEX\n{normalize_grinex_data(g_ask)}"
+            f"💱 *СТАКАН RUB → USDT* _(обновлено {dt})_\n\n"
+            f"*RAPIRA*\n🇷🇺Цена RUB\t\tОбъём USDT\n{normalize_rapira_data(r_ask)}\n\n"
+            f"*GRINEX*\n🇷🇺Цена RUB\t\tОбъём USDT\n{normalize_grinex_data(g_ask)}\n\n"
         )
         kb = [[InlineKeyboardButton("🔄 Обновить", callback_data="refresh_rub")]]
-        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb))
+        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode="Markdown")
         return
 
     # === /курс вона ===
     if arg in ["вона", "won", "krw"]:
         tv_msg = get_courses_from_tv()
         dt = datetime.utcnow().strftime("%d.%m %H:%M UTC")
-        msg = f"🇰🇷 КУРС USDT → KRW (обновлено {dt})\n\n{tv_msg}"
+        msg = f"🇰🇷 *КУРС USDT → KRW* _(обновлено {dt})_\n{tv_msg}"
         kb = [[InlineKeyboardButton("🔄 Обновить", callback_data="refresh_won")]]
-        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb))
+        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode="Markdown")
         return
 
     # === Валютная пара ===
@@ -116,59 +119,6 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb), disable_web_page_preview=True)
     except Exception as e:
         await update.message.reply_text(f"⚠ Ошибка при получении курса: {e}")
-
-
-# TODO: INLINE Refresh
-async def kurs_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    data = query.data
-
-    # === Refresh all ===
-    if data == "refresh_all":
-        r_ask, r_bids = get_courses_from_rapira()
-        g_ask, g_bids = get_courses_from_grinex()
-        tv_msg = get_courses_from_tv()
-
-        dt = datetime.utcnow().strftime("%d.%m %H:%M UTC")
-        rapira_msg = normalize_rapira_data(r_ask) + f"\n==================\n🇺🇸USDT/RUB: {r_bids}\n"
-        grinex_msg = normalize_grinex_data(g_ask)+ f"\n==================\n🇺🇸USDT/RUB: {g_bids}\n"
-
-        msg = (
-            f"📊 КУРСЫ (обновлено {dt})\n\n"
-            f"*RAPIRA* - https://rapira.net/exchange/USDT_RUB\n{rapira_msg}\n\n"
-            f"*GRINEX* - https://grinex.io/trading/usdta7a5\n{grinex_msg}\n\n"
-            f"*TRADINGVIEW* - https://ru.tradingview.com/chart/?symbol=BITHUMB%3AUSDTKRW\n🇰🇷KRW/USDT - {tv_msg}"
-        )
-
-        kb = [[InlineKeyboardButton("🔄 Обновить всё", callback_data="refresh_all")]]
-        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(kb), disable_web_page_preview=True)
-        return
-
-    # === Refresh rub/usdt/usdt/krw ===
-    elif data in ["refresh_rub", "refresh_usdt", "refresh_won"]:
-        fake_update = type("obj", (object,), {"message": query.message})
-        fake_context = type("obj", (object,), {"args": [data.split("_")[1]]})
-        await kurs_command(fake_update, fake_context)
-        return
-
-    # === Refresh pair ===
-    else:
-        try:
-            _, pair, amount = data.split("_")
-            base, quote = pair[:3], pair[3:]
-            amount = float(amount)
-            result = exchange.convert(base, quote, amount)
-            dt = datetime.utcfromtimestamp(result["timestamp"]).strftime("%d.%m %H:%M UTC")
-            msg = (
-                f"{result['converted']:.3f} {quote} = ({amount}) {base}\n"
-                f"1 {base} = {result['rate']:.5f} {quote}\n"
-                f"at {dt} currencylayer.com"
-            )
-            kb = [[InlineKeyboardButton("🔄 Обновить курс", callback_data=f"refresh_{base}{quote}_{amount}")]]
-            await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(kb))
-        except Exception as e:
-            await query.edit_message_text(f"⚠ Ошибка при обновлении курса: {e}")
 
 
 async def pair_command(update: Update, context: ContextTypes.DEFAULT_TYPE):

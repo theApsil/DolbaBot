@@ -12,7 +12,8 @@ class CurrencyLayerExchange(ExchangeBase):
     BASE_URL = "http://api.currencylayer.com"
 
     def convert(self, from_curr: str, to_curr: str, amount: float) -> dict:
-        """Конвертация валют через CurrencyLayer API"""
+        """Conversion through CurrencyLayer API"""
+        requests.get(self.BASE_URL + f"/live?access_key={CURRENCYLAYER_KEY}")
         url = f"{self.BASE_URL}/convert"
         params = {
             "access_key": CURRENCYLAYER_KEY,
@@ -24,7 +25,7 @@ class CurrencyLayerExchange(ExchangeBase):
         data = resp.json()
 
         if not data.get("success"):
-            raise ValueError(f"Ошибка CurrencyLayer API: {data.get('error', {}).get('info', 'неизвестная ошибка')}")
+            raise ValueError(f"Error CurrencyLayer API: {data.get('error', {}).get('info', ' ')}")
 
         return {
             "from": from_curr,
