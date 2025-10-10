@@ -8,6 +8,7 @@ from exchanges.rapira import get_courses_from_rapira, normalize_rapira_data
 from exchanges.traidingview import get_courses_from_tv
 from utils.calculator import evaluate
 from utils.helpers import escape_md
+from services.formulas import tether, krw
 
 
 exchange = CurrencyLayerExchange()
@@ -36,8 +37,8 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.split()
     args = text[1:]
 
+    r_ask, r_bids = get_courses_from_rapira()
     if not args:
-        r_ask, r_bids = get_courses_from_rapira()
         g_ask, g_bids = get_courses_from_grinex()
         tv_msg = get_courses_from_tv()
 
@@ -62,9 +63,22 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # === /курс usdt ===
     if arg in ["usdt", "доллар", "тезер"]:
-        r_ask, r_bids = get_courses_from_rapira()
-        g_ask, g_bids = get_courses_from_grinex()
+        new_args = args[1:]
         dt = datetime.utcnow().strftime("%d.%m %H:%M UTC")
+
+        if new_args:
+            city, index = new_args[0], new_args[1]
+            # TODO: Нормализация сопоставления городов и их индекса
+            course = tether(r_bids, float(city), float(index))
+
+            msg = (
+                f"💵 *Объём тезера* _({dt})_\n"
+                f"{course[0]} = {course[1]}\n"
+            )
+            await update.message.reply_text(msg, parse_mode="Markdown")
+            return
+
+        g_ask, g_bids = get_courses_from_grinex()
         msg = (
             f"💵 *КУРС USDT → RUB* _(обновлено {dt})_\n\n"
             f"*RAPIRA*\n🇺🇸USDT/RUB: {r_bids}\n\n"
@@ -76,7 +90,6 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # === /курс руб ===
     if arg in ["руб", "rub", "ruble"]:
-        r_ask, _ = get_courses_from_rapira()
         g_ask, _ = get_courses_from_grinex()
         dt = datetime.utcnow().strftime("%d.%m %H:%M UTC")
         msg = (
@@ -92,6 +105,18 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if arg in ["вона", "won", "krw"]:
         tv_msg = get_courses_from_tv()
         dt = datetime.utcnow().strftime("%d.%m %H:%M UTC")
+        new_args = args[1:]
+
+        if new_args:
+            city, index = new_args[0], new_args[1]
+            won = krw(r_bids, float(city), tv_msg, float(index))
+            msg = (
+                f"🇰🇷 *КУРС USDT → KRW* _({dt})_\n"
+                f"{won[0]} = {won[1]}\n"
+            )
+            await update.message.reply_text(msg, parse_mode="Markdown")
+            return
+
         msg = f"🇰🇷 *КУРС USDT → KRW* _(обновлено {dt})_\n{tv_msg}"
         kb = [[InlineKeyboardButton("🔄 Обновить", callback_data="refresh_won")]]
         await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode="Markdown")
@@ -110,6 +135,7 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         amount = evaluate(expr)
         result = exchange.convert(base, quote, amount)
         dt = datetime.utcfromtimestamp(result["timestamp"]).strftime("%d.%m %H:%M UTC")
+
         msg = (
             f"{result['converted']:.3f} {quote} = ({amount}) {base}\n"
             f"1 {base} = {result['rate']:.5f} {quote}\n"

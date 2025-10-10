@@ -19,3 +19,5 @@ DATABASE_URL = (
     f"postgresql+psycopg2://{POSTGRES['user']}:{POSTGRES['password']}"
     f"@{POSTGRES['host']}:{POSTGRES['port']}/{POSTGRES['db']}"
 )
+
+EXCEL_PATH = os.getenv("EXCEL_PATH")
