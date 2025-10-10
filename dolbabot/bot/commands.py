@@ -99,7 +99,6 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"💱 *СТАКАН RUB → USDT* _(обновлено {dt})_\n\n"
             f"*RAPIRA*\n🇷🇺Цена RUB\t\tОбъём USDT\n{normalize_rapira_data(r_ask)}\n\n"
             f"*GRINEX*\n🇷🇺Цена RUB\t\tОбъём USDT\n{normalize_grinex_data(g_ask)}\n\n"
-            f"Я ПРИНЯЛ РЕШЕНИЕ ВЗЯТЬ КУРС {actual_tether['price']}"
         )
         kb = [[InlineKeyboardButton("🔄 Обновить", callback_data="refresh_rub")]]
         await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode="Markdown")
