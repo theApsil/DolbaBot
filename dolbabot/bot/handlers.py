@@ -25,8 +25,10 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     r_ask = r_ask[5:10]
     # === 1. Обновление всех курсов ===
     if data == "refresh_all":
-
-        tv_msg = get_courses_from_tv()
+        r_ask, r_bids = get_courses_from_rapira()
+        g_ask, g_bids = get_courses_from_grinex()
+        tv_req = get_courses_from_tv()
+        tv_msg = tv_req["course"]
 
         rapira_msg = normalize_rapira_data(r_ask) + f"\n==================\n🇺🇸USDT/RUB: {r_bids}\n"
         grinex_msg = normalize_grinex_data(g_ask) + f"\n==================\n🇺🇸USDT/RUB: {g_bids}\n"
@@ -63,8 +65,11 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"*GRINEX*\n🇷🇺Цена RUB\t\tОбъём USDT\n{normalize_grinex_data(g_ask)}\n\n"
             )
         else:  # won
-            tv_msg = get_courses_from_tv()
-            msg = f"🇰🇷 *КУРС USDT → KRW* _(обновлено {dt})_\n{tv_msg}"
+            tv_req = get_courses_from_tv()
+            tv_msg = tv_req["course"]
+            tv_time = datetime.fromisoformat(tv_req["time"]).strftime("%d.%m %H:%M UTC")
+
+            msg = f"🇰🇷 *КУРС USDT → KRW* _(обновлено {tv_time})_\n{tv_msg}"
 
         kb = [[InlineKeyboardButton("🔄 Обновить", callback_data=f"refresh_{arg}")]]
         await query.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb),

@@ -43,7 +43,8 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     r_ask = r_ask[5:10]
     if not args:
         g_ask, g_bids = get_courses_from_grinex()
-        tv_msg = get_courses_from_tv()
+        tv_req = get_courses_from_tv()
+        tv_msg = tv_req["course"]
 
         dt = datetime.utcnow().strftime("%d.%m %H:%M UTC")
         rapira_msg = normalize_rapira_data(r_ask) + f"\n==================\n🇺🇸USDT/RUB: {r_bids}\n"
@@ -106,7 +107,8 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # === /курс вона ===
     if arg in ["вона", "won", "krw"]:
-        tv_msg = get_courses_from_tv()
+        tv_req = get_courses_from_tv()
+        tv_msg = tv_req["course"]
         dt = datetime.utcnow().strftime("%d.%m %H:%M UTC")
         new_args = args[1:]
 
