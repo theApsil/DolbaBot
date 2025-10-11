@@ -1,5 +1,5 @@
 import re
-from config import EXCEL_PATH
+from config import config
 import pandas as pd
 
 def escape_md(text: str) -> str:
@@ -10,7 +10,7 @@ def escape_md(text: str) -> str:
     return re.sub(r'([_*\[\]()~`>#+\-=|{}.!])', r'\\\1', text)
 
 
-def read_excel(path=EXCEL_PATH):
+def read_excel(path=config.EXCEL_PATH):
     df = pd.read_excel(path)
 
     result = {}

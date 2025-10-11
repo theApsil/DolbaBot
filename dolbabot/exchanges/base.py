@@ -1,6 +1,6 @@
 import requests
-from config import CURRENCYLAYER_KEY
-
+from config import config
+from utils.logger import
 
 class ExchangeBase:
     def convert(self, from_curr: str, to_curr: str, amount: float) -> dict:
@@ -9,18 +9,18 @@ class ExchangeBase:
 
 
 class CurrencyLayerExchange(ExchangeBase):
-    BASE_URL = "https://api.currencylayer.com"
+    BASE_URL = config.CURRENCYLAYER_URL
 
     def convert(self, from_curr: str, to_curr: str, amount: float) -> dict:
         """Conversion through CurrencyLayer API"""
         url = f"{self.BASE_URL}/convert"
         params = {
-            "access_key": CURRENCYLAYER_KEY,
+            "access_key": config.CURRENCYLAYER_KEY,
             "from": from_curr,
             "to": to_curr,
             "amount": amount,
         }
-        print(params)
+        logger.info(params)
         resp = requests.get(url,  params=params, timeout=10)
         data = resp.json()
 

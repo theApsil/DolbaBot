@@ -1,8 +1,9 @@
 import requests
 import json
+from config import config
 
 
-def get_courses_from_grinex(url="https://grinex.io/api/v1/spot/depth?symbol=usdta7a5"):
+def get_courses_from_grinex(url=config.GRINEX_URL):
     response = requests.get(url)
     result = json.loads(response.text)
 
