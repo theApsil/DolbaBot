@@ -5,9 +5,6 @@ class Config:
     def __init__(self):
         self.TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-        self.XE_API_USER = os.getenv("XE_API_USER")
-        self.XE_API_KEY = os.getenv("XE_API_KEY")
-
         self.CURRENCYLAYER_KEY = os.getenv("CURRENCYLAYER_KEY")
 
         self.POSTGRES = {
