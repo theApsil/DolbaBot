@@ -8,7 +8,7 @@ def get_courses_from_grinex(url="https://grinex.io/api/v1/spot/depth?symbol=usdt
 
     ask = result['asks'][0:5]
     bid = result['bids'][0]['price']
-    return ask, bid
+    return ask[::-1], bid
 
 def normalize_grinex_data(data):
     lines = []

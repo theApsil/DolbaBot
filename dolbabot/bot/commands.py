@@ -8,8 +8,8 @@ from exchanges.rapira import get_courses_from_rapira, normalize_rapira_data
 from exchanges.traidingview import get_courses_from_tv
 from utils.calculator import evaluate
 from utils.helpers import escape_md
-from services.formulas import tether, krw
-
+from services.formulas import tether, krw, jpy
+from utils.rapira_decision import make_decision
 
 exchange = CurrencyLayerExchange()
 
@@ -38,6 +38,9 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = text[1:]
 
     r_ask, r_bids = get_courses_from_rapira()
+    actual_tether = make_decision(r_ask)['price']
+
+    r_ask = r_ask[5:10]
     if not args:
         g_ask, g_bids = get_courses_from_grinex()
         tv_req = get_courses_from_tv()
@@ -70,7 +73,7 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if new_args:
             city, index = new_args[0], new_args[1]
             # TODO: Нормализация сопоставления городов и их индекса
-            course = tether(r_bids, float(city), float(index))
+            course = tether(actual_tether, float(city), float(index))
 
             msg = (
                 f"💵 *Объём тезера* _({dt})_\n"
@@ -111,7 +114,9 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if new_args:
             city, index = new_args[0], new_args[1]
-            won = krw(r_bids, float(city), tv_msg, float(index))
+            # TODO: Нормализация сопоставления городов и их индекса
+
+            won = krw(actual_tether, float(city), tv_msg, float(index))
             msg = (
                 f"🇰🇷 *КУРС USDT → KRW* _({dt})_\n"
                 f"{won[0]} = {won[1]}\n"
@@ -123,6 +128,29 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         kb = [[InlineKeyboardButton("🔄 Обновить", callback_data="refresh_won")]]
         await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode="Markdown")
         return
+
+    if arg in ["йена", "jpy"]:
+        dt = datetime.utcnow().strftime("%d.%m %H:%M UTC")
+        new_args = args[1:]
+        if not new_args or len(new_args) != 3:
+            msg = (
+                f"Ошибка при указании параметров рассчёта курса. Повторите запрос с корректным количеством параметров\n"
+                f"Например: `/курс йена Краснодар 145.6 1`\n"
+            )
+            await update.message.reply_text(msg, parse_mode="Markdown")
+            return
+        else:
+            city, tether, index = new_args[0], new_args[1], new_args[2]
+            # TODO: Нормализация сопоставления городов и их индекса
+
+            jpy_msg = jpy(actual_tether, city, tether, index)
+            msg = (
+                f"🇯🇵 *USDT → JPY* _(обновлено {dt})_\n"
+                f"{jpy_msg[0]} = {jpy_msg[1]}\n"
+                f"*КУРС:* _{round(jpy_msg[1] * 100, 2)}_"
+            )
+            await update.message.reply_text(msg, parse_mode="Markdown")
+            return
 
     # === Валютная пара ===
     raw_pair = re.sub(r'[^A-Za-z]', '', arg).upper()

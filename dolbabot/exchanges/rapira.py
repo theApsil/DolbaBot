@@ -10,7 +10,7 @@ def get_courses_from_rapira(url="https://api.rapira.net/market/exchange-plate-mi
     result = json.loads(response.text)
     ask = result['ask']['items']
     bid = result['bid']['items'][0]['price']
-    return ask[0:5], bid
+    return ask[0:10][::-1], bid
 
 
 def normalize_rapira_data(data):
