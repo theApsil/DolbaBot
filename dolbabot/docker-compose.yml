@@ -37,6 +37,11 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "pgrep", "-f", "main.py" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
 volumes:
   postgres_data:
