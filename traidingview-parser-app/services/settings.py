@@ -14,13 +14,13 @@ class Settings(BaseSettings):
     postgres_user: str
     postgres_password: str
     postgres_host: str
-    postgres_outer_port: str
     postgres_db: str
+    postgres_connection_port: str = "5432"
 
     @property
     def database_url(self) -> str:
         """Динамически создаем database_url из отдельных переменных"""
-        return f"postgresql+psycopg2://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_outer_port}/{self.postgres_db}"
+        return f"postgresql+psycopg2://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_connection_port}/{self.postgres_db}"
 
     class Config:
         env_file = ".env"

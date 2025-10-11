@@ -1,17 +1,17 @@
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS builder
+FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Рабочая директория
 WORKDIR /app
 
-# Установка зависимостей через uv
+RUN pip install uv
+
 COPY pyproject.toml .
 COPY uv.lock .
 RUN uv sync --frozen
 
-# Копируем код
+ENV PATH="/app/.venv/bin:$PATH"
+
 COPY . .
 
-# Запуск FastAPI
 CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

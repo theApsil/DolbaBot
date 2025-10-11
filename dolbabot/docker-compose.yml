@@ -37,9 +37,6 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
-    volumes:
-      - .:/app
-    command: python main.py
 
 volumes:
   postgres_data:

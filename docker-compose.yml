@@ -37,11 +37,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      traidingview-fastapi-app:
+        condition: service_healthy
 
   selenium-hub:
     extends:
       file: ./traidingview-parser-app/docker-compose.yml
       service: selenium-hub
+    depends_on:
+      chrome-node:
+        condition: service_healthy
     env_file:
       - .env
 
@@ -60,6 +65,8 @@ services:
       - .env
     depends_on:
       chrome-node:
+        condition: service_healthy
+      selenium-hub:
         condition: service_healthy
       postgres:
         condition: service_healthy
