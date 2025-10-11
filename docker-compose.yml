@@ -44,9 +44,6 @@ services:
     extends:
       file: ./traidingview-parser-app/docker-compose.yml
       service: selenium-hub
-    depends_on:
-      chrome-node:
-        condition: service_healthy
     env_file:
       - .env
 

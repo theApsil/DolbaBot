@@ -6,9 +6,6 @@ services:
     container_name: selenium-hub
     ports:
       - "4444:4444"
-    depends_on:
-      chrome-node:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4444/status"]
       interval: 5s
