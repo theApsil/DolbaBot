@@ -5,16 +5,13 @@ class Config:
     def __init__(self):
         self.TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-        self.XE_API_USER = os.getenv("XE_API_USER")
-        self.XE_API_KEY = os.getenv("XE_API_KEY")
-
         self.CURRENCYLAYER_KEY = os.getenv("CURRENCYLAYER_KEY")
 
         self.POSTGRES = {
             "user": os.getenv("POSTGRES_USER", "bot_user"),
             "password": os.getenv("POSTGRES_PASSWORD", "bot_password"),
             "host": os.getenv("POSTGRES_HOST", "localhost"),
-            "port": os.getenv("POSTGRES_PORT", "5432"),
+            "port": os.getenv("POSTGRES_CONNECTION_PORT", "5432"),
             "db": os.getenv("POSTGRES_DB", "bot_db"),
         }
 

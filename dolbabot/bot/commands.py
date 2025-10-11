@@ -8,7 +8,7 @@ from exchanges.rapira import get_courses_from_rapira, normalize_rapira_data
 from exchanges.traidingview import get_courses_from_tv
 from utils.calculator import evaluate
 from utils.helpers import escape_md
-from services.formulas import tether, krw, jpy
+from services.formulas import usdt, krw, jpy
 from utils.rapira_decision import make_decision
 
 exchange = CurrencyLayerExchange()
@@ -51,7 +51,7 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         grinex_msg = normalize_grinex_data(g_ask)+ f"\n==================\n🇺🇸USDT/RUB: {g_bids}\n"
 
         msg = (
-            f"📊 *КУРСЫ* \(обновлено {escape_md(dt)}\)\n\n"
+            f"📊 *КУРСЫ* \({escape_md(dt)}\)\n\n"
             f"*RAPIRA* — [ссылка]({escape_md('https://rapira.net/exchange/USDT_RUB')})\n{escape_md(rapira_msg)}\n\n"
             f"*GRINEX* — [ссылка]({escape_md('https://grinex.io/trading/usdta7a5')})\n{escape_md(grinex_msg)}\n\n"
             f"*TRADINGVIEW* — [ссылка]({escape_md('https://ru.tradingview.com/chart/?symbol=BITHUMB%3AUSDTKRW')})\n🇰🇷KRW/USDT — {escape_md(tv_msg)}"
@@ -73,7 +73,7 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if new_args:
             city, index = new_args[0], new_args[1]
             # TODO: Нормализация сопоставления городов и их индекса
-            course = tether(actual_tether, float(city), float(index))
+            course = usdt(actual_tether, float(city), float(index))
 
             msg = (
                 f"💵 *Объём тезера* _({dt})_\n"
@@ -84,7 +84,7 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         g_ask, g_bids = get_courses_from_grinex()
         msg = (
-            f"💵 *КУРС USDT → RUB* _(обновлено {dt})_\n\n"
+            f"💵 *КУРС USDT → RUB* _({dt})_\n\n"
             f"*RAPIRA*\n🇺🇸USDT/RUB: {r_bids}\n\n"
             f"*GRINEX*\n🇺🇸USDT/RUB: {g_bids}"
         )
@@ -97,7 +97,7 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         g_ask, _ = get_courses_from_grinex()
         dt = datetime.utcnow().strftime("%d.%m %H:%M UTC")
         msg = (
-            f"💱 *СТАКАН RUB → USDT* _(обновлено {dt})_\n\n"
+            f"💱 *СТАКАН RUB → USDT* _({dt})_\n\n"
             f"*RAPIRA*\n🇷🇺Цена RUB\t\tОбъём USDT\n{normalize_rapira_data(r_ask)}\n\n"
             f"*GRINEX*\n🇷🇺Цена RUB\t\tОбъём USDT\n{normalize_grinex_data(g_ask)}\n\n"
         )
@@ -109,13 +109,12 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if arg in ["вона", "won", "krw"]:
         tv_req = get_courses_from_tv()
         tv_msg = tv_req["course"]
-        dt = datetime.utcnow().strftime("%d.%m %H:%M UTC")
+        dt = datetime.fromisoformat(tv_req["time"]).strftime("%d.%m %H:%M UTC")
         new_args = args[1:]
 
         if new_args:
             city, index = new_args[0], new_args[1]
             # TODO: Нормализация сопоставления городов и их индекса
-
             won = krw(actual_tether, float(city), tv_msg, float(index))
             msg = (
                 f"🇰🇷 *КУРС USDT → KRW* _({dt})_\n"
@@ -124,7 +123,7 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(msg, parse_mode="Markdown")
             return
 
-        msg = f"🇰🇷 *КУРС USDT → KRW* _(обновлено {dt})_\n{tv_msg}"
+        msg = f"🇰🇷 *КУРС USDT → KRW* _({dt})_\n{tv_msg}"
         kb = [[InlineKeyboardButton("🔄 Обновить", callback_data="refresh_won")]]
         await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode="Markdown")
         return

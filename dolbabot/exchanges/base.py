@@ -1,6 +1,6 @@
 import requests
 from config import config
-from utils.logger import
+from utils.logger import logger
 
 class ExchangeBase:
     def convert(self, from_curr: str, to_curr: str, amount: float) -> dict:

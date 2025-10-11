@@ -1,8 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from .models import Base
+from db.models import Base
 from utils.logger import logger
-
+from config import config
 
 class DatabaseManager:
     def __init__(self):
@@ -12,9 +12,10 @@ class DatabaseManager:
 
     def init_database(self, schema: str = None):
         """Инициализация БД с указанием схемы"""
+        logger.info("Staring database...")
         self.schema = schema
 
-        self.engine = create_engine(settings.database_url)
+        self.engine = create_engine(config.DATABASE_URL)
 
         if schema:
             Base.metadata.schema = schema

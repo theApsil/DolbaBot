@@ -89,5 +89,8 @@ class RegionIndex(Base):
     __tablename__ = "region_index"
 
     id = Column(Integer, primary_key=True)
-    city = Column(String)
+    city = Column(String,  unique=True)
     index = Column(Float)
+
+    def __repr__(self):
+        return "<RegionIndex(city='%s', index='%s')>" % (self.city, self.index)

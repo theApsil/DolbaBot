@@ -1,5 +1,5 @@
 from telegram.ext import CommandHandler, MessageHandler, filters, CallbackQueryHandler
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update
 from telegram.ext import ContextTypes
 from datetime import datetime
 import re
@@ -25,8 +25,6 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     r_ask = r_ask[5:10]
     # === 1. Обновление всех курсов ===
     if data == "refresh_all":
-        r_ask, r_bids = get_courses_from_rapira()
-        g_ask, g_bids = get_courses_from_grinex()
         tv_req = get_courses_from_tv()
         tv_msg = tv_req["course"]
 
@@ -40,9 +38,7 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"*TRADINGVIEW* — [ссылка](https://ru.tradingview.com/chart/?symbol=BITHUMB%3AUSDTKRW)\n🇰🇷KRW/USDT — {tv_msg}"
         )
 
-        kb = [[InlineKeyboardButton("🔄 Обновить всё", callback_data="refresh_all")]]
         await query.message.reply_text(msg,
-                                       reply_markup=InlineKeyboardMarkup(kb),
                                       parse_mode="Markdown",
                                        disable_web_page_preview=True
                                        )
@@ -71,9 +67,9 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             msg = f"🇰🇷 *КУРС USDT → KRW* _(обновлено {tv_time})_\n{tv_msg}"
 
-        kb = [[InlineKeyboardButton("🔄 Обновить", callback_data=f"refresh_{arg}")]]
-        await query.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb),
-                                      parse_mode="Markdown", disable_web_page_preview=True)
+        await query.message.reply_text(msg,
+                                        parse_mode="Markdown",
+                                        disable_web_page_preview=True)
         return
 
     # === 3. Обновление валютной пары (EURUSD и т.д.) ===
@@ -88,9 +84,9 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"1 {base} = {result['rate']:.5f} {quote}\n"
                 f"_(обновлено {dt})_ через currencylayer.com"
             )
-            kb = [[InlineKeyboardButton("🔄 Обновить курс", callback_data=f"refresh_{pair}_{amount}")]]
-            await query.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb),
-                                          parse_mode="Markdown", disable_web_page_preview=True)
+            await query.message.reply_text(msg,
+                                            parse_mode="Markdown",
+                                            disable_web_page_preview=True)
         except Exception as e:
             await query.message.reply_text(f"⚠ Ошибка при обновлении курса: {e}")
         return
