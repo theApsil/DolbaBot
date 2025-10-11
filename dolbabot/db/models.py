@@ -84,3 +84,10 @@ class TransactionHistory(Base):
 
     user = relationship("User", back_populates="transaction_history")
     bank_account = relationship("BankAccount", back_populates="transaction_history")
+
+class RegionIndex(Base):
+    __tablename__ = "region_index"
+
+    id = Column(Integer, primary_key=True)
+    city = Column(String)
+    index = Column(Float)
