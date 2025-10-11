@@ -1,5 +1,5 @@
-from models import RegionIndex
-from database import db_manager
+from db.models import RegionIndex
+from db.database import db_manager
 import pandas as pd
 from utils.logger import logger
 
@@ -32,4 +32,4 @@ def import_data(path: str) -> None:
 
 if __name__ == '__main__':
 
-    import_data('../static/table.xlsx')
+    import_data('static/table.xlsx')
