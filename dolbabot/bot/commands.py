@@ -10,6 +10,8 @@ from utils.calculator import evaluate
 from utils.helpers import escape_md
 from services.formulas import usdt, krw, jpy
 from utils.rapira_decision import make_decision
+from db.handlers import RegionIndexHandler
+
 
 exchange = CurrencyLayerExchange()
 
@@ -72,8 +74,10 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if new_args:
             city, index = new_args[0], new_args[1]
+            city = city.title()
+
             # TODO: Нормализация сопоставления городов и их индекса
-            course = usdt(actual_tether, float(city), float(index))
+            course = usdt(actual_tether, city, float(index))
 
             msg = (
                 f"💵 *Объём тезера* _({dt})_\n"
@@ -114,8 +118,9 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if new_args:
             city, index = new_args[0], new_args[1]
+            city = city.title()
             # TODO: Нормализация сопоставления городов и их индекса
-            won = krw(actual_tether, float(city), tv_msg, float(index))
+            won = krw(actual_tether, city, tv_msg, float(index))
             msg = (
                 f"🇰🇷 *КУРС USDT → KRW* _({dt})_\n"
                 f"{won[0]} = {won[1]}\n"
@@ -139,7 +144,8 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(msg, parse_mode="Markdown")
             return
         else:
-            city, tether, index = new_args[0], new_args[1], new_args[2]
+            city, tether, index = new_args[0], float(new_args[1]), float(new_args[2])
+            city = city.title()
             # TODO: Нормализация сопоставления городов и их индекса
 
             jpy_msg = jpy(actual_tether, city, tether, index)
