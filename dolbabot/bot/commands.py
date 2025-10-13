@@ -13,7 +13,7 @@ from utils.rapira_decision import make_decision
 from utils.logger import logger
 from db.database import db_manager
 from db.models import User, BankAccount
-from sqlalchemy.exc import IntegrityError
+from db.handlers import telegram_user_handler, bank_account_handler, telegram_group_handler
 from telegram import Update
 from utils.logger import logger
 
@@ -244,25 +244,38 @@ async def calc_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # === /добавь ===
 async def add_account_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    session = db_manager.get_session()
-
     text = update.message.text.split()
     args = text[1:]
 
     try:
-        user_tag = update.effective_user.username or str(update.effective_user.id)
-        user = session.query(User).filter(User.telegram_tag == user_tag).first()
+        user = update.message.from_user
+        user_tag = user.username or str(user.id)
+        user_id = int(user.id)
+        chat_id = update.message.chat_id
+        chat_tag = update.message.chat.title or str(update.message.chat.id)
+
+        # Получаем пользователя
+        user = telegram_user_handler.get_one(telegram_tag=user_tag)
 
         if not user:
             logger.info(f"ADD: {user_tag} to database")
-            user = User(
+            user = telegram_user_handler.create(
+                id=user_id,
                 name=update.effective_user.full_name,
                 telegram_tag=user_tag
             )
-            session.add(user)
-            session.commit()
 
-        logger.info(f"CONTEXT ARGS {context.args}")
+        # Получаем группу
+        group = telegram_group_handler.get_one(id=chat_id)
+        if not group:
+            logger.info(f"ADD: {chat_tag} to database")
+            group = telegram_group_handler.create(
+                id=chat_id,
+                name=chat_tag,
+                telegram_tag=user_tag # TODO: Заменить
+            )
+
+        logger.info(f"CONTEXT ARGS {args}")
         if not args:
             await update.message.reply_text("❌ Укажите название счёта. Пример: /добавь usd 2")
             return
@@ -270,7 +283,7 @@ async def add_account_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         account_name = args[0].lower()
         decimals = 2
 
-        if len(args) > 1:
+        if len(args) > 1: # TODO: Добавить проверку на множественное количество аргументов
             try:
                 decimals = int(args[1])
             except ValueError:
@@ -283,24 +296,16 @@ async def add_account_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             await update.message.reply_text("❌ Точность не может быть больше 8.")
             return
 
-        existing = (
-            session.query(BankAccount)
-            .join(User.groups)
-            .filter(BankAccount.account_name == account_name)
-            .first()
-        )
+        existing = bank_account_handler.get_one(account_name=account_name, group_id=group.id)
         if existing:
             await update.message.reply_text("⚠️ Счёт с таким именем уже существует!")
             return
 
-        # Создаём счёт без привязки к группе, если у пользователя нет групп
-        bank_account = BankAccount(
+        bank_account_handler.create(
             account_name=account_name,
-            amount=0.0,
-            decimals=decimals
+            decimals=decimals,
+            group_id=group.id,
         )
-        session.add(bank_account)
-        session.commit()
 
         await update.message.reply_text(
             f"✅ Счёт добавлен. Установлена точность до {decimals} разрядов после запятой."
@@ -309,14 +314,9 @@ async def add_account_command(update: Update, context: ContextTypes.DEFAULT_TYPE
                  "Иное кол-во разрядов (от 0 до 8) устанавливается добавлением числа в конце команды добавления."
         )
 
-    except IntegrityError:
-        session.rollback()
-        await update.message.reply_text("⚠️ Счёт с таким именем уже существует!")
     except Exception as e:
         logger.error(f"Ошибка при добавлении счёта: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка при добавлении счёта.")
-    finally:
-        session.close()
 
 
 # === /дай ===
