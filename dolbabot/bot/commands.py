@@ -10,8 +10,7 @@ from utils.calculator import evaluate
 from utils.helpers import escape_md
 from services.formulas import usdt, krw, jpy
 from utils.rapira_decision import make_decision
-from db.handlers import RegionIndexHandler
-
+from utils.logger import logger
 
 exchange = CurrencyLayerExchange()
 
@@ -41,7 +40,7 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     r_ask, r_bids = get_courses_from_rapira()
     actual_tether = make_decision(r_ask)['price']
-
+    logger.info(F"DECISION RAPIRA: {actual_tether}")
     r_ask = r_ask[5:10]
     if not args:
         g_ask, g_bids = get_courses_from_grinex()

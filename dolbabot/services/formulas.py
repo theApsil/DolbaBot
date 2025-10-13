@@ -3,26 +3,32 @@ from db.handlers import RegionIndexHandler
 
 region_handler = RegionIndexHandler()
 
-def usdt(usd: float, city: str, index: float) -> tuple[str, float]:
+def usdt(usd: float, city: str, index: float) -> str | tuple[str, float]:
     city_index_obj = region_handler.get_city_index(city)
-    if city_index_obj == "Москва":
-        text = f"({usd} + {city}) + {index}%"
+    if city_index_obj.city == "Москва":
+        text = f"({usd} + {city_index_obj.index}) + {index}%"
+    elif city_index_obj is not None:
+        text = f"({usd} + {city_index_obj.index}%) + {index}%"
     else:
-        text = f"({usd} + {city}%) + {index}%"
+        return "Несуществующий город. Введите корректный город."
     return text, evaluate(text)
 
-def jpy(usd: float, city: str, tether: float, index: float) -> tuple[str, float]:
+def jpy(usd: float, city: str, tether: float, index: float) -> str | tuple[str, float]:
     city_index_obj = region_handler.get_city_index(city)
-    if city_index_obj == "Москва":
-        text = f"({usd} + {city}) / {tether} + {index}%"
+    if city_index_obj.city == "Москва":
+        text = f"({usd} + {city_index_obj.index}) / {tether} + {index}%"
+    elif city_index_obj is not None:
+        text = f"({usd} + {city_index_obj.index}%) / {tether} + {index}%"
     else:
-        text = f"({usd} + {city}%) / {tether} + {index}%"
+        return "Несуществующий город. Введите корректный город."
     return text, evaluate(text)
 
-def krw(usd: float, city: str, won: float, index: float) -> tuple[str, float]:
+def krw(usd: float, city: str, won: float, index: float) -> str | tuple[str, float]:
     city_index_obj = region_handler.get_city_index(city)
-    if city_index_obj == "Москва":
-        text = f"({usd} + {city}) / {won - 5} + {index}%"
+    if city_index_obj.city == "Москва":
+        text = f"({usd} + {city_index_obj.index}) / {won - 5} + {index}%"
+    elif city_index_obj is not None:
+        text = f"({usd} + {city_index_obj.index}%) / {won - 5} + {index}%"
     else:
-        text = f"({usd} + {city}%) / {won - 5} + {index}%"
+        return "Несуществующий город. Введите корректный город."
     return text, evaluate(text)
