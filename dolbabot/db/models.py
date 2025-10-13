@@ -1,11 +1,29 @@
 from sqlalchemy import (
-    Column, Integer, String, Date, Float, ForeignKey, Table, Boolean
+    Column, Integer, String, Date, Float, ForeignKey, Table, Boolean, BigInteger, DateTime, func
 )
 from sqlalchemy.orm import (
     relationship, declarative_base
 )
 
+
 Base = declarative_base()
+
+
+class BaseModel(Base):
+    __abstract__ = True  # чтобы сам класс не создавал таблицу
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False
+    )
 
 user_group = Table(
     "user_group",
@@ -15,10 +33,10 @@ user_group = Table(
 )
 
 
-class User(Base):
+class User(BaseModel):
     __tablename__ = "user"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(BigInteger, primary_key=True)
     name = Column(String)
     telegram_tag = Column(String)
 
@@ -28,10 +46,10 @@ class User(Base):
     transaction_history = relationship("TransactionHistory", back_populates="user", passive_deletes=True)
 
 
-class Group(Base):
+class Group(BaseModel):
     __tablename__ = "group"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(BigInteger, primary_key=True)
     name = Column(String)
     telegram_tag = Column(String)
 
@@ -39,14 +57,14 @@ class Group(Base):
     bank_accounts = relationship("BankAccount", back_populates="group", cascade="all, delete-orphan")
 
 
-class BankAccount(Base):
+class BankAccount(BaseModel):
     __tablename__ = "bank_account"
 
     id = Column(Integer, primary_key=True)
     account_name = Column(String)
-    amount = Column(Float)
+    amount = Column(Float, default=0)
     decimals = Column(Integer)
-    group_id = Column(Integer, ForeignKey("group.id", ondelete="CASCADE"))
+    group_id = Column(BigInteger, ForeignKey("group.id", ondelete="CASCADE"))
 
     group = relationship("Group", back_populates="bank_accounts")
 
@@ -54,7 +72,7 @@ class BankAccount(Base):
     transaction_history = relationship("TransactionHistory", back_populates="bank_account", cascade="all, delete-orphan")
 
 
-class Transaction(Base):
+class Transaction(BaseModel):
     __tablename__ = "transaction"
 
     id = Column(Integer, primary_key=True)
@@ -70,7 +88,7 @@ class Transaction(Base):
     bank_account = relationship("BankAccount", back_populates="transactions")
 
 
-class TransactionHistory(Base):
+class TransactionHistory(BaseModel):
     __tablename__ = "transaction_history"
 
     id = Column(Integer, primary_key=True)
@@ -85,7 +103,7 @@ class TransactionHistory(Base):
     user = relationship("User", back_populates="transaction_history")
     bank_account = relationship("BankAccount", back_populates="transaction_history")
 
-class RegionIndex(Base):
+class RegionIndex(BaseModel):
     __tablename__ = "region_index"
 
     id = Column(Integer, primary_key=True)
