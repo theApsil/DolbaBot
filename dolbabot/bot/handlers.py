@@ -3,12 +3,17 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from datetime import datetime
 import re
-
 from exchanges.grinex import get_courses_from_grinex, normalize_grinex_data
 from exchanges.rapira import get_courses_from_rapira, normalize_rapira_data
 from exchanges.traidingview import get_courses_from_tv
 from exchanges.base import CurrencyLayerExchange
-from .commands import help_command, kurs_command, pair_command, start_command, calc_command
+from .commands import (help_command,
+                       kurs_command,
+                       pair_command,
+                       start_command,
+                       calc_command,
+                       add_account_command,
+                       get_accounts_command)
 
 exchange = CurrencyLayerExchange()
 
@@ -97,10 +102,15 @@ def register_handlers(app):
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("kurs", kurs_command))
+    app.add_handler(CommandHandler("add", add_account_command))
+    app.add_handler(CommandHandler("give", get_accounts_command))
 
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(старт|start)\b", re.IGNORECASE)), start_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(помоги|help)\b", re.IGNORECASE)), help_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(курс|kurs)\b", re.IGNORECASE)), kurs_command))
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(добавь|add)\b", re.IGNORECASE)), add_account_command))
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(дай|give)\b", re.IGNORECASE)), get_accounts_command))
+
 
     app.add_handler(CallbackQueryHandler(refresh_callback, pattern=r"^refresh_"))
     app.add_handler(MessageHandler(filters.Regex(r"^/[^a-zA-Z]"), calc_command))

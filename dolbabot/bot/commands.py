@@ -11,6 +11,12 @@ from utils.helpers import escape_md
 from services.formulas import usdt, krw, jpy
 from utils.rapira_decision import make_decision
 from utils.logger import logger
+from db.database import db_manager
+from db.models import User, BankAccount
+from sqlalchemy.exc import IntegrityError
+from telegram import Update
+from utils.logger import logger
+
 
 exchange = CurrencyLayerExchange()
 
@@ -33,6 +39,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(HELP_TEXT)
 
 
+async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    pass
+
 # === /курс ===
 async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.split()
@@ -41,6 +50,7 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     r_ask, r_bids = get_courses_from_rapira()
     actual_tether = make_decision(r_ask)['price']
     logger.info(F"DECISION RAPIRA: {actual_tether}")
+
     r_ask = r_ask[5:10]
     if not args:
         g_ask, g_bids = get_courses_from_grinex()
@@ -230,3 +240,127 @@ async def calc_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"{expr} = {result}")
     except Exception as e:
         await update.message.reply_text(f"Ошибка: {e}")
+
+
+# === /добавь ===
+async def add_account_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    session = db_manager.get_session()
+
+    text = update.message.text.split()
+    args = text[1:]
+
+    try:
+        user_tag = update.effective_user.username or str(update.effective_user.id)
+        user = session.query(User).filter(User.telegram_tag == user_tag).first()
+
+        if not user:
+            logger.info(f"ADD: {user_tag} to database")
+            user = User(
+                name=update.effective_user.full_name,
+                telegram_tag=user_tag
+            )
+            session.add(user)
+            session.commit()
+
+        logger.info(f"CONTEXT ARGS {context.args}")
+        if not args:
+            await update.message.reply_text("❌ Укажите название счёта. Пример: /добавь usd 2")
+            return
+
+        account_name = args[0].lower()
+        decimals = 2
+
+        if len(args) > 1:
+            try:
+                decimals = int(args[1])
+            except ValueError:
+                await update.message.reply_text("❌ Точность должна быть числом от 0 до 8.")
+                return
+        if decimals < 0:
+            await update.message.reply_text("❌ Точность не может быть меньше 0.")
+            return
+        if decimals > 8:
+            await update.message.reply_text("❌ Точность не может быть больше 8.")
+            return
+
+        existing = (
+            session.query(BankAccount)
+            .join(User.groups)
+            .filter(BankAccount.account_name == account_name)
+            .first()
+        )
+        if existing:
+            await update.message.reply_text("⚠️ Счёт с таким именем уже существует!")
+            return
+
+        # Создаём счёт без привязки к группе, если у пользователя нет групп
+        bank_account = BankAccount(
+            account_name=account_name,
+            amount=0.0,
+            decimals=decimals
+        )
+        session.add(bank_account)
+        session.commit()
+
+        await update.message.reply_text(
+            f"✅ Счёт добавлен. Установлена точность до {decimals} разрядов после запятой."
+            if decimals != 2
+            else "✅ Счёт добавлен. Установлена точность 2 разряда после запятой. "
+                 "Иное кол-во разрядов (от 0 до 8) устанавливается добавлением числа в конце команды добавления."
+        )
+
+    except IntegrityError:
+        session.rollback()
+        await update.message.reply_text("⚠️ Счёт с таким именем уже существует!")
+    except Exception as e:
+        logger.error(f"Ошибка при добавлении счёта: {e}")
+        await update.message.reply_text("⚠️ Произошла ошибка при добавлении счёта.")
+    finally:
+        session.close()
+
+
+# === /дай ===
+async def get_accounts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    session = db_manager.get_session()
+    try:
+        user_tag = update.effective_user.username or str(update.effective_user.id)
+        user = session.query(User).filter(User.telegram_tag == user_tag).first()
+        logger.info(f"USER ARGS {User.groups}")
+        if not user:
+            await update.message.reply_text("У вас пока нет счетов.")
+            return
+
+        accounts = (
+            session.query(BankAccount)
+            .join(User.groups, isouter=True)
+            .all()
+        )
+
+        if not accounts:
+            await update.message.reply_text("У вас пока нет счетов.")
+            return
+
+        msg_lines = ["`Ваших средств:`"]
+        for acc in accounts:
+            formatted_amount = f"{acc.amount:.{acc.decimals}f}"
+            line = f"{formatted_amount} {acc.account_name.upper()}"
+            padded_line = line.rjust(30)
+            msg_lines.append(f"`{padded_line}`")
+
+        msg = "\n".join(msg_lines)
+        keyboard = [
+            [
+                InlineKeyboardButton("📄 Текущая выписка", callback_data="statement_current"),
+                InlineKeyboardButton("📜 Полная выписка", callback_data="statement_full"),
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(msg,
+                                        reply_markup=reply_markup,
+                                        parse_mode="Markdown")
+
+    except Exception as e:
+        logger.error(f"Ошибка при получении счетов: {e}")
+        await update.message.reply_text("⚠️ Произошла ошибка при получении списка счетов.")
+    finally:
+        session.close()
