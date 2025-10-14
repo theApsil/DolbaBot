@@ -1,5 +1,5 @@
 from telegram.ext import CommandHandler, MessageHandler, filters, CallbackQueryHandler
-from telegram import Update
+from telegram import Update, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from datetime import datetime
 import re
@@ -15,11 +15,13 @@ from .commands import (help_command,
                        add_account_command,
                        get_accounts_command,
                        add_money_command)
+from db.handlers.model_handlers import transaction_handler, bank_account_handler
+from utils.logger import logger
 
 exchange = CurrencyLayerExchange()
 
 
-# === Обработка всех Inline-кнопок ===
+# === Обработка всех Inline-кнопок связанных с курсом ===
 async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -98,6 +100,63 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 
+async def cancel_transaction_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    try:
+        data = query.data
+        if not data.startswith("cancel_"):
+            return
+
+        transaction_id = data.split("_", 1)[1]
+        logger.info(f"[transaction_id]: {transaction_id}")
+        # === 1. Получаем транзакцию ===
+        transaction = transaction_handler.get_one(id=transaction_id)
+        if not transaction:
+            await query.edit_message_text("⚠️ Транзакция не найдена.")
+            return
+
+        if transaction.is_checked:
+            await query.edit_message_text("❌ Транзакция уже сверена и не может быть отменена.")
+            return
+
+        # === 2. Получаем счёт ===
+        account = bank_account_handler.get_one(id=transaction.bank_account_id)
+        if not account:
+            await query.edit_message_text("⚠️ Счёт, связанный с транзакцией, не найден.")
+            return
+
+        # === 3. Откатываем баланс ===
+        new_balance = (account.amount or 0) - transaction.amount
+        bank_account_handler.update(
+            filters={"id": account.id},
+            updates={"amount": new_balance},
+        )
+
+        # === 4. Обновляем транзакцию ===
+        transaction_handler.update(
+            filters={"id": transaction.id},
+            updates={"user_request": f"[Отмена] {transaction.user_request}"},
+        )
+
+        # === 5. Обновляем сообщение ===
+        formatted_amount = f"{transaction.amount:,.{account.decimals}f}".replace(",", "’")
+        formatted_balance = f"{new_balance:,.{account.decimals}f}".replace(",", "’")
+
+        cancel_time = datetime.now().strftime("%d.%m %H:%M")
+        msg = (
+            f"❌ Отменено {cancel_time}\n"
+            f"−{formatted_amount}\n"
+            f"Баланс: {formatted_balance} {account.account_name.upper()}\n"
+        )
+
+        await query.edit_message_text(msg, parse_mode="Markdown", reply_markup=None)
+
+    except Exception as e:
+        logger.error(f"Ошибка при отмене транзакции: {e}")
+        await query.edit_message_text("⚠️ Ошибка при отмене транзакции.")
+
 # === Регистрация всех хэндлеров ===
 def register_handlers(app):
     app.add_handler(CommandHandler("start", start_command))
@@ -116,5 +175,6 @@ def register_handlers(app):
 
 
     app.add_handler(CallbackQueryHandler(refresh_callback, pattern=r"^refresh_"))
+    app.add_handler(CallbackQueryHandler(cancel_transaction_callback, pattern=r"^cancel_"))
     app.add_handler(MessageHandler(filters.Regex(r"^/[^a-zA-Z]"), calc_command))
     app.add_handler(MessageHandler(filters.COMMAND, pair_command))
