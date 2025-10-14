@@ -249,16 +249,16 @@ async def add_account_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         chat_id = update.message.chat_id
         chat_tag = update.message.chat.title or str(update.message.chat.id)
 
-        # Получаем пользователя
-        user = telegram_user_handler.get_one(telegram_tag=user_tag)
-
-        if not user:
-            logger.info(f"ADD: {user_tag} to database")
-            user = telegram_user_handler.create(
-                id=user_id,
-                name=update.effective_user.full_name,
-                telegram_tag=user_tag
-            )
+        # # Получаем пользователя
+        # user = telegram_user_handler.get_one(telegram_tag=user_tag)
+        #
+        # if not user:
+        #     logger.info(f"ADD: {user_tag} to database")
+        #     user = telegram_user_handler.create(
+        #         id=user_id,
+        #         name=update.effective_user.full_name,
+        #         telegram_tag=user_tag
+        #     )
 
         # Получаем группу
         group = telegram_group_handler.get_one(id=chat_id)
@@ -299,8 +299,8 @@ async def add_account_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         bank_account_handler.create(
             account_name=account_name,
             decimals=decimals,
-            user_id=user.id,
-            group_id=group.id,
+            user_id=user_id,
+            group_id=chat_id,
         )
 
         await update.message.reply_text(

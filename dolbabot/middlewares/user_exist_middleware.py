@@ -7,7 +7,7 @@ async def user_middleware(update, context):
     """Промежуточная функция, проверяющая и создающая пользователя."""
     user = update.effective_user
 
-    user_exist = context.user_data.get('user_exist')
+    user_exist = context.user_data.get('user_exists')
     if user_exist:
         return
 
