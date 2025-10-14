@@ -428,3 +428,40 @@ async def reconciliation_command(update: Update, context: ContextTypes.DEFAULT_T
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text("Выберите действие:", reply_markup=reply_markup)
+
+
+# === /удалить ===
+async def delete_account_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        text = update.message.text.strip()
+        parts = text.split(maxsplit=1)
+
+        if len(parts) < 2:
+            await update.message.reply_text("❌ Укажите название счёта. Пример: /удалить usd")
+            return
+
+        account_name = parts[1].lower()
+        chat_id = update.message.chat_id
+
+        # Проверяем наличие счёта
+        account = bank_account_handler.get_one(account_name=account_name, group_id=chat_id)
+        if not account:
+            await update.message.reply_text(f"⚠️ Счёт {account_name.upper()} не найден.")
+            return
+
+        keyboard = [
+            [
+                InlineKeyboardButton("✅ Удалить", callback_data=f"account_confirm_delete_{account.id}"),
+                InlineKeyboardButton("❌ Отмена", callback_data="account_cancel_delete")
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await update.message.reply_text(
+            f"Вы уверены, что хотите удалить счёт *{account_name.upper()}* и все связанные с ним данные?",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при запросе подтверждения удаления счёта: {e}")
+        await update.message.reply_text("⚠️ Произошла ошибка при запросе подтверждения удаления счёта.")

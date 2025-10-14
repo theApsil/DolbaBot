@@ -15,7 +15,8 @@ from .commands import (help_command,
                        add_account_command,
                        get_accounts_command,
                        add_money_command,
-                       reconciliation_command)
+                       reconciliation_command,
+                       delete_account_command)
 from db.handlers.model_handlers import (transaction_handler,
                                         bank_account_handler)
 from utils.logger import logger
@@ -192,6 +193,43 @@ async def reconciliation_callback(update: Update, context: ContextTypes.DEFAULT_
         logger.error(f"Ошибка при сверке: {e}")
         await query.edit_message_text("⚠️ Ошибка при сверке балансов.")
 
+
+async def delete_account_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        query = update.callback_query
+
+        await query.answer()
+
+        data = query.data
+        logger.info(f"[DATA]: {data}")
+        # Отмена
+        if data == "account_cancel_delete":
+            await query.edit_message_text("❎ Удаление отменено.")
+            return
+
+        # Подтверждение
+        if data.startswith("account_confirm_delete_"):
+            account_id = data.split("_")[-1]
+            account = bank_account_handler.get_one(id=account_id)
+
+            if not account:
+                await query.edit_message_text("⚠️ Счёт уже удалён или не найден.")
+                return
+
+            deleted = bank_account_handler.delete(id=account_id)
+            if deleted:
+                await query.edit_message_text(
+                    f"🗑 Счёт *{account.account_name.upper()}* и все связанные данные удалены.",
+                    parse_mode="Markdown"
+                )
+            else:
+                await query.edit_message_text("⚠️ Не удалось удалить счёт.")
+
+    except Exception as e:
+        logger.error(f"Ошибка при подтверждении удаления счёта: {e}")
+        await update.callback_query.edit_message_text("⚠️ Произошла ошибка при удалении счёта.")
+
+
 # === Регистрация всех хэндлеров ===
 def register_handlers(app):
     app.add_handler(CommandHandler("start", start_command))
@@ -201,6 +239,7 @@ def register_handlers(app):
     app.add_handler(CommandHandler("give", get_accounts_command))
     app.add_handler(CommandHandler("money", add_money_command))
     app.add_handler(CommandHandler("reconciliation", reconciliation_command))
+    app.add_handler(CommandHandler("delete", delete_account_command))
 
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(старт|start)\b", re.IGNORECASE)), start_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(помоги|help)\b", re.IGNORECASE)), help_command))
@@ -209,10 +248,13 @@ def register_handlers(app):
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(курс|kurs)\b", re.IGNORECASE)), kurs_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(добавь|add)\b", re.IGNORECASE)), add_account_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(сверить|reconciliation)\b", re.IGNORECASE)), reconciliation_command))
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(удалить|delete)\b", re.IGNORECASE)), delete_account_command))
 
     app.add_handler(CallbackQueryHandler(refresh_callback, pattern=r"^refresh_"))
     app.add_handler(CallbackQueryHandler(cancel_transaction_callback, pattern=r"^cancel_"))
     app.add_handler(CallbackQueryHandler(reconciliation_callback, pattern=r"^reconcile_"))
+    app.add_handler(CallbackQueryHandler(delete_account_callback, pattern=r"^(account_confirm_delete_)"))
+    app.add_handler(CallbackQueryHandler(delete_account_callback, pattern=r"^(account_cancel_delete)"))
 
     app.add_handler(MessageHandler(filters.Regex(r"^/[^a-zA-Z]"), calc_command))
     app.add_handler(MessageHandler(filters.COMMAND, pair_command))
