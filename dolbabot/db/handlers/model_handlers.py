@@ -26,6 +26,7 @@ class TransactionHandler(BaseHandler):
         Возвращает список созданных объектов TransactionHistory.
         """
         session = self.get_session()
+        count = 0
         try:
             query = session.query(Transaction)
             if filters:
@@ -33,10 +34,11 @@ class TransactionHandler(BaseHandler):
 
             transactions = query.all()
             if not transactions:
-                return []
+                return 0
 
             history_objects = []
             for tx in transactions:
+                count += 1
                 # создаём копию для истории
                 history_tx = TransactionHistory(
                     id=tx.id,
@@ -60,7 +62,7 @@ class TransactionHandler(BaseHandler):
             for obj in history_objects:
                 session.expunge(obj)
 
-            return history_objects
+            return count
 
         except Exception as e:
             logger.error(f"Ошибка при переносе транзакций в историю: {e}")

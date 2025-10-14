@@ -414,3 +414,17 @@ async def add_money_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Ошибка при добавлении средств: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка при добавлении средств.")
+
+
+# === Сверка балансов ===
+async def reconciliation_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await get_accounts_command(update, context)
+    keyboard = [
+            [
+                InlineKeyboardButton("Сверено✅", callback_data="reconcile_confirm"),
+                InlineKeyboardButton("Отменить❌", callback_data="reconcile_cancel"),
+            ]
+        ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text("Выберите действие:", reply_markup=reply_markup)

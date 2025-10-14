@@ -14,8 +14,10 @@ from .commands import (help_command,
                        calc_command,
                        add_account_command,
                        get_accounts_command,
-                       add_money_command)
-from db.handlers.model_handlers import transaction_handler, bank_account_handler
+                       add_money_command,
+                       reconciliation_command)
+from db.handlers.model_handlers import (transaction_handler,
+                                        bank_account_handler)
 from utils.logger import logger
 
 exchange = CurrencyLayerExchange()
@@ -157,6 +159,36 @@ async def cancel_transaction_callback(update: Update, context: ContextTypes.DEFA
         logger.error(f"Ошибка при отмене транзакции: {e}")
         await query.edit_message_text("⚠️ Ошибка при отмене транзакции.")
 
+
+async def reconciliation_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data
+
+    try:
+        # === Отмена сверки ===
+        if data == "reconcile_cancel":
+            await query.edit_message_text("❌ Сверка отменена.")
+            return
+
+        # === Подтверждение сверки ===
+        if data == "reconcile_confirm":
+            logger.info(f"[GROUP]: {query.message.chat.id}")
+            count = transaction_handler.transfer_to_history(
+                filters={
+                    "is_checked": False,
+                    "bank_account_id": query.message.chat.id
+                },
+            )
+
+            await query.edit_message_text(f"✅ Балансы сверены. ({count} транзакций отмечено)")
+            return
+
+    except Exception as e:
+        logger.error(f"Ошибка при сверке: {e}")
+        await query.edit_message_text("⚠️ Ошибка при сверке балансов.")
+
 # === Регистрация всех хэндлеров ===
 def register_handlers(app):
     app.add_handler(CommandHandler("start", start_command))
@@ -165,6 +197,7 @@ def register_handlers(app):
     app.add_handler(CommandHandler("add", add_account_command))
     app.add_handler(CommandHandler("give", get_accounts_command))
     app.add_handler(CommandHandler("money", add_money_command))
+    app.add_handler(CommandHandler("reconciliation", reconciliation_command))
 
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(старт|start)\b", re.IGNORECASE)), start_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(помоги|help)\b", re.IGNORECASE)), help_command))
@@ -172,9 +205,11 @@ def register_handlers(app):
     app.add_handler(MessageHandler(filters.Regex(r"^/[a-zA-Z]{3,5}\b"), add_money_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(курс|kurs)\b", re.IGNORECASE)), kurs_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(добавь|add)\b", re.IGNORECASE)), add_account_command))
-
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(сверить|reconciliation)\b", re.IGNORECASE)), reconciliation_command))
 
     app.add_handler(CallbackQueryHandler(refresh_callback, pattern=r"^refresh_"))
     app.add_handler(CallbackQueryHandler(cancel_transaction_callback, pattern=r"^cancel_"))
+    app.add_handler(CallbackQueryHandler(reconciliation_callback, pattern=r"^reconcile_"))
+
     app.add_handler(MessageHandler(filters.Regex(r"^/[^a-zA-Z]"), calc_command))
     app.add_handler(MessageHandler(filters.COMMAND, pair_command))
