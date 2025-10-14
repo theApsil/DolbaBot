@@ -249,17 +249,6 @@ async def add_account_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         chat_id = update.message.chat_id
         chat_tag = update.message.chat.title or str(update.message.chat.id)
 
-        # # Получаем пользователя
-        # user = telegram_user_handler.get_one(telegram_tag=user_tag)
-        #
-        # if not user:
-        #     logger.info(f"ADD: {user_tag} to database")
-        #     user = telegram_user_handler.create(
-        #         id=user_id,
-        #         name=update.effective_user.full_name,
-        #         telegram_tag=user_tag
-        #     )
-
         # Получаем группу
         group = telegram_group_handler.get_one(id=chat_id)
         if not group:
@@ -319,17 +308,9 @@ async def add_account_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def get_accounts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user = update.message.from_user
-        user_tag = user.username or str(user.id)
         user_id = int(user.id)
         chat_id = update.message.chat_id
         chat_tag = update.message.chat.title or str(update.message.chat.id)
-
-        # Получаем пользователя
-        user = telegram_user_handler.get_one(telegram_tag=user_tag)
-        logger.info(f"USER ARGS {User.groups}")
-        if not user:
-            await update.message.reply_text("У вас пока нет счетов.")
-            return
 
         accounts = bank_account_handler.filter_many(user_id=user_id, group_id=chat_id)
         if not accounts:
