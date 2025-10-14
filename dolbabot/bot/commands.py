@@ -15,7 +15,6 @@ from db.database import db_manager
 from db.models import User, BankAccount
 from db.handlers import telegram_user_handler, bank_account_handler, telegram_group_handler
 from telegram import Update
-from utils.logger import logger
 
 
 exchange = CurrencyLayerExchange()
@@ -37,10 +36,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(HELP_TEXT)
-
-
-async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pass
 
 # === /курс ===
 async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -304,6 +299,7 @@ async def add_account_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         bank_account_handler.create(
             account_name=account_name,
             decimals=decimals,
+            user_id=user.id,
             group_id=group.id,
         )
 
@@ -321,21 +317,21 @@ async def add_account_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 # === /дай ===
 async def get_accounts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    session = db_manager.get_session()
     try:
-        user_tag = update.effective_user.username or str(update.effective_user.id)
-        user = session.query(User).filter(User.telegram_tag == user_tag).first()
+        user = update.message.from_user
+        user_tag = user.username or str(user.id)
+        user_id = int(user.id)
+        chat_id = update.message.chat_id
+        chat_tag = update.message.chat.title or str(update.message.chat.id)
+
+        # Получаем пользователя
+        user = telegram_user_handler.get_one(telegram_tag=user_tag)
         logger.info(f"USER ARGS {User.groups}")
         if not user:
             await update.message.reply_text("У вас пока нет счетов.")
             return
 
-        accounts = (
-            session.query(BankAccount)
-            .join(User.groups, isouter=True)
-            .all()
-        )
-
+        accounts = bank_account_handler.filter_many(user_id=user_id, group_id=chat_id)
         if not accounts:
             await update.message.reply_text("У вас пока нет счетов.")
             return
@@ -362,5 +358,3 @@ async def get_accounts_command(update: Update, context: ContextTypes.DEFAULT_TYP
     except Exception as e:
         logger.error(f"Ошибка при получении счетов: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка при получении списка счетов.")
-    finally:
-        session.close()

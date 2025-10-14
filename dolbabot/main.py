@@ -4,10 +4,11 @@ from config import config
 from datetime import datetime
 from utils.logger import logger
 from db.database import db_manager
-
+from middlewares.user_exist_middleware import user_middleware
 
 def main():
     db_manager.init_database()
+    user_middlewar = user_exist_middleware()
     app = Application.builder().token(config.TELEGRAM_TOKEN).build()
     register_handlers(app)
     logger.info("Бот запущен... " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))

@@ -42,6 +42,7 @@ class User(BaseModel):
 
     groups = relationship("Group", secondary=user_group, back_populates="users", passive_deletes=True)
 
+    bank_accounts = relationship("BankAccount", back_populates="user", cascade="all, delete-orphan")
     transactions = relationship("Transaction", back_populates="user", passive_deletes=True)
     transaction_history = relationship("TransactionHistory", back_populates="user", passive_deletes=True)
 
@@ -64,8 +65,10 @@ class BankAccount(BaseModel):
     account_name = Column(String)
     amount = Column(Float, default=0)
     decimals = Column(Integer)
+    user_id = Column(BigInteger, ForeignKey("user.id", ondelete="CASCADE"))
     group_id = Column(BigInteger, ForeignKey("group.id", ondelete="CASCADE"))
 
+    user = relationship("User", back_populates="bank_accounts")
     group = relationship("Group", back_populates="bank_accounts")
 
     transactions = relationship("Transaction", back_populates="bank_account", cascade="all, delete-orphan")
