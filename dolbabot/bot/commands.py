@@ -13,7 +13,10 @@ from utils.rapira_decision import make_decision
 from utils.logger import logger
 from db.database import db_manager
 from db.models import User, BankAccount
-from db.handlers import telegram_user_handler, bank_account_handler, telegram_group_handler
+from db.handlers import (telegram_user_handler,
+                         bank_account_handler,
+                         telegram_group_handler,
+                         transaction_handler)
 from telegram import Update
 
 
@@ -312,7 +315,7 @@ async def get_accounts_command(update: Update, context: ContextTypes.DEFAULT_TYP
         chat_id = update.message.chat_id
         chat_tag = update.message.chat.title or str(update.message.chat.id)
 
-        accounts = bank_account_handler.filter_many(user_id=user_id, group_id=chat_id)
+        accounts = bank_account_handler.filter_many(group_id=chat_id)
         if not accounts:
             await update.message.reply_text("У вас пока нет счетов.")
             return
@@ -339,3 +342,81 @@ async def get_accounts_command(update: Update, context: ContextTypes.DEFAULT_TYP
     except Exception as e:
         logger.error(f"Ошибка при получении счетов: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка при получении списка счетов.")
+
+
+# === /<название_счёта> сумма ===
+async def add_money_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        text = update.message.text.strip()
+        parts = text.split(maxsplit=1)
+
+        if len(parts) < 2:
+            await update.message.reply_text("❌ Укажите сумму или выражение. Пример: /usd (12*2)+1/3+0.5%")
+            return
+
+        account_name = parts[0].replace("/", "").lower()
+        expression = parts[1].strip()
+
+        user = update.message.from_user
+        user_id = int(user.id)
+        chat_id = update.message.chat_id
+
+        # Проверяем наличие счёта
+        account = bank_account_handler.get_one(account_name=account_name, group_id=chat_id)
+        if not account:
+            await update.message.reply_text(f"⚠️ Счёт {account_name.upper()} не найден.")
+            return
+        decimals = account.decimals
+        account_id = account.id
+        # === 1. Вычисляем выражение ===
+        try:
+            amount = round(float(evaluate(expression)), decimals)
+        except Exception as e:
+            await update.message.reply_text(f"❌ Ошибка в выражении: {e}")
+            return
+
+        # === 2. Обновляем баланс ===
+        new_balance = (account.amount or 0) + amount
+
+        bank_account_handler.update(
+            filters={
+                "group_id": chat_id,
+                "account_name": account_name,
+            },
+            updates={
+                "amount": new_balance,
+            }
+        )
+
+
+        # === 3. Создаём транзакцию ===
+        transaction = transaction_handler.create(
+            amount=amount,  # итоговая сумма
+            date=datetime.now().date(),
+            user_request=expression,  # без /название
+            user_id=user_id,
+            balance=new_balance,
+            bank_account_id=account_id,
+            is_checked=False,
+        )
+
+        # === 4. Форматируем ответ ===
+        formatted_amount = f"{amount:,.{decimals}f}".replace(",", "’")
+        formatted_balance = f"{new_balance:,.{decimals}f}".replace(",", "’")
+
+        keyboard = [
+            [InlineKeyboardButton("❌ Отменить", callback_data=f"cancel_{transaction.id}")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        msg = (
+            f"Запомнил. +{formatted_amount}\n"
+            f"Баланс: {formatted_balance} {account_name.upper()}\n"
+            f"🆔 ID транзакции: `{transaction.id}`"
+        )
+
+        await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
+
+    except Exception as e:
+        logger.error(f"Ошибка при добавлении средств: {e}")
+        await update.message.reply_text("⚠️ Произошла ошибка при добавлении средств.")

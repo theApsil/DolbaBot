@@ -13,7 +13,8 @@ from .commands import (help_command,
                        start_command,
                        calc_command,
                        add_account_command,
-                       get_accounts_command)
+                       get_accounts_command,
+                       add_money_command)
 
 exchange = CurrencyLayerExchange()
 
@@ -104,12 +105,14 @@ def register_handlers(app):
     app.add_handler(CommandHandler("kurs", kurs_command))
     app.add_handler(CommandHandler("add", add_account_command))
     app.add_handler(CommandHandler("give", get_accounts_command))
+    app.add_handler(CommandHandler("money", add_money_command))
 
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(старт|start)\b", re.IGNORECASE)), start_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(помоги|help)\b", re.IGNORECASE)), help_command))
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(дай|give)\b", re.IGNORECASE)), get_accounts_command))
+    app.add_handler(MessageHandler(filters.Regex(r"^/[a-zA-Z]{3,5}\b"), add_money_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(курс|kurs)\b", re.IGNORECASE)), kurs_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(добавь|add)\b", re.IGNORECASE)), add_account_command))
-    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(дай|give)\b", re.IGNORECASE)), get_accounts_command))
 
 
     app.add_handler(CallbackQueryHandler(refresh_callback, pattern=r"^refresh_"))

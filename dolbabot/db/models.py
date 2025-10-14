@@ -82,9 +82,9 @@ class Transaction(BaseModel):
     amount = Column(Float)
     date = Column(Date)
     user_request = Column(String)
-    user_id = Column(Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    user_id = Column(BigInteger, ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
     balance = Column(Float)
-    bank_account_id = Column(Integer, ForeignKey("bank_account.id", ondelete="CASCADE"))
+    bank_account_id = Column(BigInteger, ForeignKey("bank_account.id", ondelete="CASCADE"))
     is_checked = Column(Boolean)
 
     user = relationship("User", back_populates="transactions")
@@ -98,9 +98,9 @@ class TransactionHistory(BaseModel):
     amount = Column(Float)
     date = Column(Date)
     user_request = Column(String)
-    user_id = Column(Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    user_id = Column(BigInteger, ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
     balance = Column(Float)
-    bank_account_id = Column(Integer, ForeignKey("bank_account.id", ondelete="CASCADE"))
+    bank_account_id = Column(BigInteger, ForeignKey("bank_account.id", ondelete="CASCADE"))
     is_checked = Column(Boolean)
 
     user = relationship("User", back_populates="transaction_history")
