@@ -174,13 +174,16 @@ async def reconciliation_callback(update: Update, context: ContextTypes.DEFAULT_
 
         # === Подтверждение сверки ===
         if data == "reconcile_confirm":
+            count = 0
             logger.info(f"[GROUP]: {query.message.chat.id}")
-            count = transaction_handler.transfer_to_history(
-                filters={
-                    "is_checked": False,
-                    "bank_account_id": query.message.chat.id
-                },
-            )
+            accounts = bank_account_handler.filter_many(group_id=query.message.chat.id)
+            for account in accounts:
+                count += transaction_handler.transfer_to_history(
+                    filters={
+                        "is_checked": False,
+                        "bank_account_id": account.id
+                    },
+                )
 
             await query.edit_message_text(f"✅ Балансы сверены. ({count} транзакций отмечено)")
             return
