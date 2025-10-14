@@ -4,6 +4,8 @@ from sqlalchemy import (
 from sqlalchemy.orm import (
     relationship, declarative_base
 )
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
 
 
 Base = declarative_base()
@@ -61,7 +63,7 @@ class Group(BaseModel):
 class BankAccount(BaseModel):
     __tablename__ = "bank_account"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     account_name = Column(String)
     amount = Column(Float, default=0)
     decimals = Column(Integer)
@@ -78,13 +80,13 @@ class BankAccount(BaseModel):
 class Transaction(BaseModel):
     __tablename__ = "transaction"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     amount = Column(Float)
     date = Column(Date)
     user_request = Column(String)
     user_id = Column(BigInteger, ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
     balance = Column(Float)
-    bank_account_id = Column(BigInteger, ForeignKey("bank_account.id", ondelete="CASCADE"))
+    bank_account_id = Column(UUID(as_uuid=True), ForeignKey("bank_account.id", ondelete="CASCADE"), default=uuid.uuid4)
     is_checked = Column(Boolean)
 
     user = relationship("User", back_populates="transactions")
@@ -94,13 +96,13 @@ class Transaction(BaseModel):
 class TransactionHistory(BaseModel):
     __tablename__ = "transaction_history"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     amount = Column(Float)
     date = Column(Date)
     user_request = Column(String)
     user_id = Column(BigInteger, ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
     balance = Column(Float)
-    bank_account_id = Column(BigInteger, ForeignKey("bank_account.id", ondelete="CASCADE"))
+    bank_account_id = Column(UUID(as_uuid=True), ForeignKey("bank_account.id", ondelete="CASCADE"), default=uuid.uuid4)
     is_checked = Column(Boolean)
 
     user = relationship("User", back_populates="transaction_history")

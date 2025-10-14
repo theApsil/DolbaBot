@@ -19,6 +19,8 @@ class BaseHandler:
             obj = self.model(**fields)
             session.add(obj)
             session.commit()
+            session.refresh(obj)  # подтягиваем актуальные данные
+            session.expunge(obj)   # отвязываем объект
             return obj
         except Exception as e:
             logger.error(f"Ошибка при создании {self.model.__name__}: {e}")
@@ -30,7 +32,12 @@ class BaseHandler:
     def get_one(self, **filters):
         session = self.get_session()
         try:
-            return session.query(self.model).filter_by(**filters).first()
+            obj = session.query(self.model).filter_by(**filters).first()
+            if not obj:
+                return None
+
+            session.expunge(obj)
+            return obj
         except Exception as e:
             logger.error(f"Ошибка при получении {self.model.__name__}: {e}")
             raise e
@@ -40,7 +47,9 @@ class BaseHandler:
     def get_all(self):
         session = self.get_session()
         try:
-            return session.query(self.model).all()
+            objs = session.query(self.model).all()
+            session.expunge_all()
+            return objs
         except Exception as e:
             logger.error(f"Ошибка при получении всех {self.model.__name__}: {e}")
             raise e
@@ -50,7 +59,9 @@ class BaseHandler:
     def filter_many(self, **filters):
         session = self.get_session()
         try:
-            return session.query(self.model).filter_by(**filters).all()
+            objs = session.query(self.model).filter_by(**filters).all()
+            session.expunge_all()
+            return objs
         except Exception as e:
             logger.error(f"Ошибка при фильтрации {self.model.__name__}: {e}")
             raise e
@@ -68,6 +79,8 @@ class BaseHandler:
                 setattr(obj, key, value)
 
             session.commit()
+            session.refresh(obj)
+            session.expunge(obj)
             return obj
         except Exception as e:
             logger.error(f"Ошибка при обновлении {self.model.__name__}: {e}")

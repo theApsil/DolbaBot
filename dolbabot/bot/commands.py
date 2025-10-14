@@ -11,8 +11,6 @@ from utils.helpers import escape_md
 from services.formulas import usdt, krw, jpy
 from utils.rapira_decision import make_decision
 from utils.logger import logger
-from db.database import db_manager
-from db.models import User, BankAccount
 from db.handlers import (telegram_user_handler,
                          bank_account_handler,
                          telegram_group_handler,
@@ -310,10 +308,7 @@ async def add_account_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 # === /дай ===
 async def get_accounts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        user = update.message.from_user
-        user_id = int(user.id)
         chat_id = update.message.chat_id
-        chat_tag = update.message.chat.title or str(update.message.chat.id)
 
         accounts = bank_account_handler.filter_many(group_id=chat_id)
         if not accounts:
@@ -387,7 +382,6 @@ async def add_money_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "amount": new_balance,
             }
         )
-
 
         # === 3. Создаём транзакцию ===
         transaction = transaction_handler.create(
