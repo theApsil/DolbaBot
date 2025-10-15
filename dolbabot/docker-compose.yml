@@ -23,55 +23,25 @@ services:
                -c port=${POSTGRES_INNER_PORT}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -p ${POSTGRES_INNER_PORT}"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
       retries: 5
     restart: unless-stopped
 
   dolbabot:
-    extends:
-      file: ./dolbabot/docker-compose.yml
-      service: dolbabot
+    build: .
+    container_name: dolbabot
     env_file:
-      - .env
+      - ./.env
     depends_on:
       postgres:
         condition: service_healthy
-      traidingview-fastapi-app:
-        condition: service_healthy
+    restart: unless-stopped
     healthcheck:
       test: [ "CMD", "pgrep", "-f", "main.py" ]
       interval: 15s
       timeout: 5s
       retries: 3
-
-  selenium-hub:
-    extends:
-      file: ./traidingview-parser-app/docker-compose.yml
-      service: selenium-hub
-    env_file:
-      - .env
-
-  chrome-node:
-    extends:
-      file: ./traidingview-parser-app/docker-compose.yml
-      service: chrome-node
-    env_file:
-      - .env
-
-  traidingview-fastapi-app:
-    extends:
-      file: ./traidingview-parser-app/docker-compose.yml
-      service: fastapi-app
-    env_file:
-      - .env
-    depends_on:
-      chrome-node:
-        condition: service_healthy
-      selenium-hub:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
 
 volumes:
   postgres_data:
