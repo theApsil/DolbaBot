@@ -15,9 +15,6 @@ services:
 
   chrome-node:
     image: selenium/node-chrome:4.25.0
-    depends_on:
-      selenium-hub:
-        condition: service_healthy
     environment:
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
@@ -39,6 +36,11 @@ services:
     depends_on:
       chrome-node:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
+      selenium-hub:
+        condition: service_healthy
+
     env_file: ".env"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:${APP_PORT}/healthcheck" ]
