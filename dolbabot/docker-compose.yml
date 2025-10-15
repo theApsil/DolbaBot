@@ -41,7 +41,7 @@ services:
       test: [ "CMD", "pgrep", "-f", "main.py" ]
       interval: 15s
       timeout: 5s
-      retries: 3
+      retries: 10
 
 volumes:
   postgres_data:
