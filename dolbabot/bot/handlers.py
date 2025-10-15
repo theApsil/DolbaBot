@@ -7,6 +7,7 @@ from exchanges.grinex import get_courses_from_grinex, normalize_grinex_data
 from exchanges.rapira import get_courses_from_rapira, normalize_rapira_data
 from exchanges.traidingview import get_courses_from_tv
 from exchanges.base import CurrencyLayerExchange
+from services.excel_worker import create_dataframe_from_object, create_temp_excel_file
 from .commands import (help_command,
                        kurs_command,
                        pair_command,
@@ -18,8 +19,10 @@ from .commands import (help_command,
                        reconciliation_command,
                        delete_account_command)
 from db.handlers.model_handlers import (transaction_handler,
-                                        bank_account_handler)
+                                        bank_account_handler,
+                                        transaction_history_handler)
 from utils.logger import logger
+from dto.transaction import TransactionDTO
 
 exchange = CurrencyLayerExchange()
 
@@ -203,12 +206,12 @@ async def delete_account_callback(update: Update, context: ContextTypes.DEFAULT_
         data = query.data
         logger.info(f"[DATA]: {data}")
         # Отмена
-        if data == "account_cancel_delete":
+        if data == "account_delete_cancel":
             await query.edit_message_text("❎ Удаление отменено.")
             return
 
         # Подтверждение
-        if data.startswith("account_confirm_delete_"):
+        if data.startswith("account_delete_confirm_"):
             account_id = data.split("_")[-1]
             account = bank_account_handler.get_one(id=account_id)
 
@@ -228,6 +231,53 @@ async def delete_account_callback(update: Update, context: ContextTypes.DEFAULT_
     except Exception as e:
         logger.error(f"Ошибка при подтверждении удаления счёта: {e}")
         await update.callback_query.edit_message_text("⚠️ Произошла ошибка при удалении счёта.")
+
+
+async def create_bank_statement(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        query = update.callback_query
+        await query.answer()
+        data = query.data
+        logger.info(f"[DATA]: {data}")
+        # Отмена
+        transactions = []
+
+        if data == "statement_current":
+            transactions = transaction_handler.get_all_with_joins(
+                filters={"is_checked": False,
+                         "group.id": query.message.chat.id},
+            )
+
+        if data == "statement_full":
+            transactions = transaction_handler.get_all_with_joins(
+                filters={
+                         "group.id": query.message.chat.id
+                },
+            )
+            transactions_history = transaction_history_handler.get_all_with_joins(
+                filters={
+                    "group.id": query.message.chat.id
+                },
+            )
+
+            transactions = transactions + TransactionDTO.from_history(transactions_history)
+        if len(transactions) == 0:
+            await query.message.reply_text("⚠️ Нет данных для выписки.")
+            return
+
+        transactions = sorted(transactions, key=lambda t: t.created_at, reverse=True)
+
+        df = create_dataframe_from_object(transactions)
+        bytes_io = create_temp_excel_file(df)
+        date = datetime.now().strftime("%d_%m_%Y")
+        await query.message.reply_document(
+            document=bytes_io,
+            filename=f"Полная_выписка_на_{date}_{query.message.chat.id}.xlsx"
+        )
+
+    except Exception as e:
+        logger.error(f"Ошибка при создании выписки: {e}")
+        await update.callback_query.edit_message_text("⚠️ Произошла ошибка при создании выписки.")
 
 
 # === Регистрация всех хэндлеров ===
@@ -253,8 +303,8 @@ def register_handlers(app):
     app.add_handler(CallbackQueryHandler(refresh_callback, pattern=r"^refresh_"))
     app.add_handler(CallbackQueryHandler(cancel_transaction_callback, pattern=r"^cancel_"))
     app.add_handler(CallbackQueryHandler(reconciliation_callback, pattern=r"^reconcile_"))
-    app.add_handler(CallbackQueryHandler(delete_account_callback, pattern=r"^(account_confirm_delete_)"))
-    app.add_handler(CallbackQueryHandler(delete_account_callback, pattern=r"^(account_cancel_delete)"))
+    app.add_handler(CallbackQueryHandler(delete_account_callback, pattern=r"^(account_delete_)"))
+    app.add_handler(CallbackQueryHandler(create_bank_statement, pattern=r"^(statement_)"))
 
     app.add_handler(MessageHandler(filters.Regex(r"^/[^a-zA-Z]"), calc_command))
     app.add_handler(MessageHandler(filters.COMMAND, pair_command))

@@ -451,8 +451,8 @@ async def delete_account_command(update: Update, context: ContextTypes.DEFAULT_T
 
         keyboard = [
             [
-                InlineKeyboardButton("✅ Удалить", callback_data=f"account_confirm_delete_{account.id}"),
-                InlineKeyboardButton("❌ Отмена", callback_data="account_cancel_delete")
+                InlineKeyboardButton("✅ Удалить", callback_data=f"account_delete_confirm_{account.id}"),
+                InlineKeyboardButton("❌ Отмена", callback_data="account_delete_cancel")
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
