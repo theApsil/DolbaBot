@@ -159,4 +159,4 @@ def evaluate(expression: str) -> float:
     expr = expression.strip().replace(",", ".")
     transformed = transform_percent_logic(expr)
     value = safe_compute(transformed)
-    return round(value, 6)
+    return round(value, 8)
