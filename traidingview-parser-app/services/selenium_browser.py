@@ -78,29 +78,27 @@ class BrowserManager:
 
     def _refresh_browser(self):
         try:
-            driver_b = self.get_driver()
-            driver_b.get(settings.selenium_browser_link)
-            WebDriverWait(driver_b, settings.browser_timeout).until(
+            # создаем новый
+            new_driver = self.get_driver()
+            new_driver.get(settings.selenium_browser_link)
+            WebDriverWait(new_driver, settings.browser_timeout).until(
                 EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
 
-            # Извлекаем курс из нового драйвера перед заменой
-            new_course_value = self.extract_course_from_page()
+            # извлекаем перед заменой
+            new_course_value = self.course_parser.get_course(new_driver.page_source)
 
-            # Закрываем предыдущий старый драйвер
-            if self.old_driver:
+            # закрываем текущий драйвер (он уже не нужен)
+            if self.driver:
                 try:
-                    self.old_driver.quit()
+                    self.driver.quit()
                 except Exception as e:
-                    logger.error(f"Ошибка при закрытии предыдущего старого драйвера: {e}")
+                    logger.error(f"Ошибка при закрытии предыдущего драйвера: {e}")
 
-            # Сохраняем текущий драйвер как старый и заменяем на новый
-            self.old_driver = self.driver
-            self.driver = driver_b
+            # заменяем
+            self.driver = new_driver
 
-            # Сохраняем курс если он изменился или просто при каждой загрузке
-            if new_course_value is not None:
-                # Используем хендлер для сохранения
+            if new_course_value:
                 course_handler.save_course(new_course_value)
                 self.last_course = new_course_value
 
