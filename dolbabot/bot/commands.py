@@ -14,7 +14,7 @@ from utils.logger import logger
 from db.handlers import (telegram_user_handler,
                          bank_account_handler,
                          telegram_group_handler,
-                         transaction_handler)
+                         transaction_handler, region_index_handler)
 from telegram import Update
 
 
@@ -30,6 +30,11 @@ HELP_TEXT = """
  - /курс usdt — курс USDT→RUB
  - /курс вона — курс USDT→KRW
  - /(выражение) — калькулятор
+ - /дай - вывод всех счетов группы
+ - /добавь <счет> <кол-во знаков> - добавить счет с названием <счет> и с количеством знаков. Если знаки не указаны - 2
+ - /<счет> <выражение> - добавить на счет результат выражения
+ - /удалить <счет> - удалить счет
+ - /сверить - запустить процедуру сверки счета
 """
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -78,8 +83,24 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         dt = datetime.utcnow().strftime("%d.%m %H:%M UTC")
 
         if new_args:
-            city, index = new_args[0], new_args[1]
+            city = new_args[0] if len(new_args) > 0 else None
+            if city is None:
+                await update.message.reply_text("🏙 Укажите город. Пример: `/курс usdt Краснодар 1.2`",
+                                                parse_mode="Markdown")
+                return
+
             city = city.title()
+
+            db_city = region_index_handler.get_one(city=city)
+            if not db_city:
+                await update.message.reply_text(f"❌ Город *{city}* не найден в базе данных.", parse_mode="Markdown")
+                return
+
+            index = float(new_args[1]) if len(new_args) > 1 else None
+            if index is None:
+                await update.message.reply_text("❌ Укажите индекс. Пример: `/курс usdt Краснодар 1.2`",
+                                                parse_mode="Markdown")
+                return
 
             # TODO: Нормализация сопоставления городов и их индекса
             course = usdt(actual_tether, city, float(index))
@@ -122,7 +143,24 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         new_args = args[1:]
 
         if new_args:
-            city, index = new_args[0], new_args[1]
+            city = new_args[0] if len(new_args) > 0 else None
+            if city is None:
+                await update.message.reply_text("🏙 Укажите город. Пример: `/курс usdt Краснодар 1.2`",
+                                                parse_mode="Markdown")
+                return
+
+            city = city.title()
+
+            db_city = region_index_handler.get_one(city=city)
+            if not db_city:
+                await update.message.reply_text(f"❌ Город *{city}* не найден в базе данных.", parse_mode="Markdown")
+                return
+
+            index = float(new_args[1]) if len(new_args) > 1 else None
+            if index is None:
+                await update.message.reply_text("❌ Укажите индекс. Пример: `/курс usdt Краснодар 1.2`",
+                                                parse_mode="Markdown")
+                return
             city = city.title()
             # TODO: Нормализация сопоставления городов и их индекса
             won = krw(actual_tether, city, tv_msg, float(index))
@@ -149,8 +187,25 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(msg, parse_mode="Markdown")
             return
         else:
-            city, tether, index = new_args[0], float(new_args[1]), float(new_args[2])
+            city = new_args[0] if len(new_args) > 0 else None
+            if city is None:
+                await update.message.reply_text("🏙 Укажите город. Пример: `/курс usdt Краснодар 1.2`",
+                                                parse_mode="Markdown")
+                return
+
             city = city.title()
+
+            db_city = region_index_handler.get_one(city=city)
+            if not db_city:
+                await update.message.reply_text(f"❌ Город *{city}* не найден в базе данных.", parse_mode="Markdown")
+                return
+
+            index = float(new_args[2]) if len(new_args) > 1 else None
+            if index is None:
+                await update.message.reply_text("❌ Укажите индекс. Пример: `/курс usdt Краснодар 1.2`",
+                                                parse_mode="Markdown")
+                return
+            tether = float(new_args[1])
             # TODO: Нормализация сопоставления городов и их индекса
 
             jpy_msg = jpy(actual_tether, city, tether, index)

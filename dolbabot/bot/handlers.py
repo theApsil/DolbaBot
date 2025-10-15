@@ -241,12 +241,14 @@ async def create_bank_statement(update: Update, context: ContextTypes.DEFAULT_TY
         logger.info(f"[DATA]: {data}")
         # Отмена
         transactions = []
+        statement_type = ""
 
         if data == "statement_current":
             transactions = transaction_handler.get_all_with_joins(
                 filters={"is_checked": False,
                          "group.id": query.message.chat.id},
             )
+            statement_type = "Текущая"
 
         if data == "statement_full":
             transactions = transaction_handler.get_all_with_joins(
@@ -259,6 +261,7 @@ async def create_bank_statement(update: Update, context: ContextTypes.DEFAULT_TY
                     "group.id": query.message.chat.id
                 },
             )
+            statement_type = "Полная"
 
             transactions = transactions + TransactionDTO.from_history(transactions_history)
         if len(transactions) == 0:
@@ -272,7 +275,7 @@ async def create_bank_statement(update: Update, context: ContextTypes.DEFAULT_TY
         date = datetime.now().strftime("%d_%m_%Y")
         await query.message.reply_document(
             document=bytes_io,
-            filename=f"Полная_выписка_на_{date}_{query.message.chat.id}.xlsx"
+            filename=f"{statement_type}_выписка_на_{date}_{query.message.chat.id}.xlsx"
         )
 
     except Exception as e:

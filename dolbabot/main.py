@@ -11,7 +11,7 @@ def main():
     db_manager.init_database()
     app = Application.builder().token(config.TELEGRAM_TOKEN).build()
 
-    app.add_handler(TypeHandler(object, group_middleware), group=-1)
+    app.add_handler(TypeHandler(object, group_middleware), group=-2)
     app.add_handler(TypeHandler(object, user_middleware), group=-1)
 
     register_handlers(app)
