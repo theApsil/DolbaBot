@@ -306,8 +306,8 @@ def register_handlers(app):
     app.add_handler(MessageHandler(filters.Regex(r"^/[a-zA-Z]{1,50}\b"), add_money_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(курс|kurs)\b", re.IGNORECASE)), kurs_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(добавь|add)\b", re.IGNORECASE)), add_account_command))
-    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(сверить|reconciliation)\b", re.IGNORECASE)), reconciliation_command))
-    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(удалить|delete)\b", re.IGNORECASE)), delete_account_command))
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(сверь|reconciliation)\b", re.IGNORECASE)), reconciliation_command))
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(удали|delete)\b", re.IGNORECASE)), delete_account_command))
 
     app.add_handler(CallbackQueryHandler(refresh_callback, pattern=r"^refresh_"))
     app.add_handler(CallbackQueryHandler(cancel_transaction_callback, pattern=r"^cancel_"))
