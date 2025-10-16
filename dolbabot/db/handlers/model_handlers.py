@@ -2,6 +2,8 @@ from sqlalchemy.orm import joinedload
 from db.models import RegionIndex, Group, User, BankAccount, Transaction, TransactionHistory
 from db.handlers.base_handler import BaseHandler
 from utils.logger import logger
+from db.mixins import JoinableMixin
+
 
 class RegionIndexHandler(BaseHandler):
     model = RegionIndex
@@ -15,8 +17,12 @@ class TelegramUserHandler(BaseHandler):
 class BankAccountHandler(BaseHandler):
     model = BankAccount
 
-class TransactionHandler(BaseHandler):
+class TransactionHandler(JoinableMixin, BaseHandler):
     model = Transaction
+    default_loads = [
+        joinedload(Transaction.user),
+        joinedload(Transaction.bank_account).joinedload(BankAccount.group),
+    ]
 
     def transfer_to_history(self, filters: dict = None):
         """
@@ -72,122 +78,15 @@ class TransactionHandler(BaseHandler):
         finally:
             session.close()
 
-    def get_all_with_joins(self, filters: dict = None):
-        session = self.get_session()
-        try:
-            query = (
-                session.query(Transaction)
-                .options(
-                    joinedload(Transaction.user),
-                    joinedload(Transaction.bank_account).joinedload(BankAccount.group)
-                )
-            )
 
-            if filters:
-                for key, value in filters.items():
-                    if "." in key:
-                        # Формат: model.field
-                        model_name, field_name = key.split(".", 1)
-
-                        if model_name == "transaction":
-                            model = Transaction
-                        elif model_name == "bank_account":
-                            model = BankAccount
-                        elif model_name == "group":
-                            model = Group
-                        elif model_name == "user":
-                            model = User
-                        else:
-                            raise ValueError(f"Неизвестная модель в фильтре: {model_name}")
-
-                        column = getattr(model, field_name, None)
-                        if not column:
-                            raise ValueError(f"Поле '{field_name}' не найдено в модели {model_name}")
-
-                        query = query.filter(column == value)
-
-                    else:
-                        # Без указания модели → считаем, что это Transaction
-                        column = getattr(Transaction, key, None)
-                        if not column:
-                            raise ValueError(
-                                f"Поле '{key}' не найдено в Transaction. "
-                                f"Укажи модель явно: e.g. 'bank_account.account_name'"
-                            )
-                        query = query.filter(column == value)
-
-            results = query.all()
-
-            for obj in results:
-                session.expunge(obj)
-
-            return results
-
-        except Exception as e:
-            logger.error(f"Ошибка при получении транзакций с джойнами: {e}")
-            raise e
-        finally:
-            session.close()
-
-class TransactionHistoryHandler(BaseHandler):
+class TransactionHistoryHandler(JoinableMixin, BaseHandler):
     model = TransactionHistory
 
-    def get_all_with_joins(self, filters: dict = None):
-        session = self.get_session()
-        try:
-            query = (
-                session.query(TransactionHistory)
-                .options(
-                    joinedload(TransactionHistory.user),
-                    joinedload(TransactionHistory.bank_account).joinedload(BankAccount.group)
-                )
-            )
+    default_loads = [
+        joinedload(TransactionHistory.user),
+        joinedload(TransactionHistory.bank_account).joinedload(BankAccount.group),
+    ]
 
-            if filters:
-                for key, value in filters.items():
-                    if "." in key:
-                        # Формат: model.field
-                        model_name, field_name = key.split(".", 1)
-
-                        if model_name == "transaction":
-                            model = TransactionHistory
-                        elif model_name == "bank_account":
-                            model = BankAccount
-                        elif model_name == "group":
-                            model = Group
-                        elif model_name == "user":
-                            model = User
-                        else:
-                            raise ValueError(f"Неизвестная модель в фильтре: {model_name}")
-
-                        column = getattr(model, field_name, None)
-                        if not column:
-                            raise ValueError(f"Поле '{field_name}' не найдено в модели {model_name}")
-
-                        query = query.filter(column == value)
-
-                    else:
-                        # Без указания модели → считаем, что это Transaction
-                        column = getattr(TransactionHistory, key, None)
-                        if not column:
-                            raise ValueError(
-                                f"Поле '{key}' не найдено в TransactionHistory. "
-                                f"Укажи модель явно: e.g. 'bank_account.account_name'"
-                            )
-                        query = query.filter(column == value)
-
-            results = query.all()
-
-            for obj in results:
-                session.expunge(obj)
-
-            return results
-
-        except Exception as e:
-            logger.error(f"Ошибка при получении истории транзакций с джойнами: {e}")
-            raise e
-        finally:
-            session.close()
 
 region_index_handler = RegionIndexHandler()
 telegram_group_handler = TelegramGroupHandler()
