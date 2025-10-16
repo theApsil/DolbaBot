@@ -102,7 +102,6 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                                 parse_mode="Markdown")
                 return
 
-            # TODO: Нормализация сопоставления городов и их индекса
             course = usdt(actual_tether, city, float(index))
 
             msg = (
@@ -460,8 +459,7 @@ async def add_money_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         msg = (
             f"Запомнил. +{formatted_amount}\n"
-            f"Баланс: {formatted_balance} {account_name.upper()}\n"
-            f"🆔 ID транзакции: `{transaction.id}`"
+            f"Баланс: {formatted_balance} {account_name.upper()}"
         )
 
         await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
@@ -520,3 +518,9 @@ async def delete_account_command(update: Update, context: ContextTypes.DEFAULT_T
     except Exception as e:
         logger.error(f"Ошибка при запросе подтверждения удаления счёта: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка при запросе подтверждения удаления счёта.")
+
+
+async def error_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "Неизвестная команда. Я таких не знаю. Я глупий."
+    )

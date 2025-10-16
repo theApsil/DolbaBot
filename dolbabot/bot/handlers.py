@@ -1,6 +1,5 @@
-from telegram.ext import CommandHandler, MessageHandler, filters, CallbackQueryHandler
+from telegram.ext import CommandHandler, MessageHandler, filters, CallbackQueryHandler, TypeHandler, ContextTypes
 from telegram import Update, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
 from datetime import datetime
 import re
 from exchanges.grinex import get_courses_from_grinex, normalize_grinex_data
@@ -17,12 +16,15 @@ from .commands import (help_command,
                        get_accounts_command,
                        add_money_command,
                        reconciliation_command,
-                       delete_account_command)
+                       delete_account_command,
+                       )
 from db.handlers.model_handlers import (transaction_handler,
                                         bank_account_handler,
                                         transaction_history_handler)
 from utils.logger import logger
 from dto.transaction import TransactionDTO
+from middlewares.user_exist_middleware import user_middleware
+from middlewares.group_exist_middleware import group_middleware
 
 exchange = CurrencyLayerExchange()
 
@@ -285,6 +287,9 @@ async def create_bank_statement(update: Update, context: ContextTypes.DEFAULT_TY
 
 # === Регистрация всех хэндлеров ===
 def register_handlers(app):
+    app.add_handler(TypeHandler(object, group_middleware), group=-2)
+    app.add_handler(TypeHandler(object, user_middleware), group=-1)
+
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("kurs", kurs_command))
@@ -297,7 +302,8 @@ def register_handlers(app):
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(старт|start)\b", re.IGNORECASE)), start_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(помоги|help)\b", re.IGNORECASE)), help_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(дай|give)\b", re.IGNORECASE)), get_accounts_command))
-    app.add_handler(MessageHandler(filters.Regex(r"^/[a-zA-Z]{3,5}\b"), add_money_command))
+    app.add_handler(MessageHandler(filters.Regex(r"^/[a-zA-Z]{6}\b"), pair_command))
+    app.add_handler(MessageHandler(filters.Regex(r"^/[a-zA-Z]{1,50}\b"), add_money_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(курс|kurs)\b", re.IGNORECASE)), kurs_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(добавь|add)\b", re.IGNORECASE)), add_account_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(сверь|reconciliation)\b", re.IGNORECASE)), reconciliation_command))
@@ -310,4 +316,3 @@ def register_handlers(app):
     app.add_handler(CallbackQueryHandler(create_bank_statement, pattern=r"^(statement_)"))
 
     app.add_handler(MessageHandler(filters.Regex(r"^/[^a-zA-Z]"), calc_command))
-    app.add_handler(MessageHandler(filters.COMMAND, pair_command))
