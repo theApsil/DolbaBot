@@ -58,6 +58,14 @@ services:
       service: chrome-node
     env_file:
       - .env
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4096M
+        reservations:
+          cpus: '1'
+          memory: 1024M
 
   traidingview-fastapi-app:
     extends:
