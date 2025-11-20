@@ -4,6 +4,7 @@ services:
   selenium-hub:
     image: selenium/hub:4.25.0
     container_name: selenium-hub
+    restart: unless-stopped
     ports:
       - "4444:4444"
     healthcheck:
@@ -21,6 +22,7 @@ services:
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
       - SE_NODE_MAX_SESSIONS=4
     shm_size: 2gb
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://selenium-hub:4444/status"]
       interval: 5s
@@ -39,6 +41,7 @@ services:
   fastapi-app:
     build: .
     container_name: fastapi-app
+    restart: unless-stopped
     ports:
       - "8000:8000"
     depends_on:
