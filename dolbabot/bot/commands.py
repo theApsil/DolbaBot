@@ -449,7 +449,8 @@ async def add_money_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         # === 4. Форматируем ответ ===
-        formatted_amount = f"{amount:,.{decimals}f}".replace(",", "’")
+        sign = "+" if amount >= 0 else "−"
+        formatted_amount_abs = f"{abs(amount):,.{decimals}f}".replace(",", "’")
         formatted_balance = f"{new_balance:,.{decimals}f}".replace(",", "’")
 
         keyboard = [
@@ -458,7 +459,7 @@ async def add_money_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         msg = (
-            f"Запомнил. +{formatted_amount}\n"
+            f"Запомнил. {sign}{formatted_amount_abs}\n"
             f"Баланс: {formatted_balance} {account_name.upper()}"
         )
 

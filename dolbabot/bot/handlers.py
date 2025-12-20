@@ -1,5 +1,5 @@
 from telegram.ext import CommandHandler, MessageHandler, filters, CallbackQueryHandler, TypeHandler, ContextTypes
-from telegram import Update, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from datetime import datetime
 import re
 from exchanges.grinex import get_courses_from_grinex, normalize_grinex_data
@@ -20,7 +20,9 @@ from .commands import (help_command,
                        )
 from db.handlers.model_handlers import (transaction_handler,
                                         bank_account_handler,
-                                        transaction_history_handler)
+                                        transaction_history_handler,
+                                        telegram_user_handler
+                                        )
 from utils.logger import logger
 from dto.transaction import TransactionDTO
 from middlewares.user_exist_middleware import user_middleware
@@ -53,11 +55,13 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"*GRINEX* — [ссылка](https://grinex.io/trading/usdta7a5)\n{grinex_msg}\n\n"
             f"*TRADINGVIEW* — [ссылка](https://ru.tradingview.com/chart/?symbol=BITHUMB%3AUSDTKRW)\n🇰🇷KRW/USDT — {tv_msg}"
         )
-
-        await query.message.reply_text(msg,
-                                      parse_mode="Markdown",
-                                       disable_web_page_preview=True
-                                       )
+        keyboard = [[InlineKeyboardButton("🔄 Обновить всё", callback_data="refresh_all")]]
+        await query.message.reply_text(
+            msg,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+            disable_web_page_preview=True
+        )
         return
 
     # === 2. Обновление RUB / USDT / WON ===
@@ -70,22 +74,29 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"*RAPIRA*\n🇺🇸USDT/RUB: {r_bids}\n\n"
                 f"*GRINEX*\n🇺🇸USDT/RUB: {g_bids}"
             )
+            keyboard = [[InlineKeyboardButton("🔄 Обновить", callback_data="refresh_usdt")]]
+
         elif arg == "rub":
             msg = (
                 f"💱 *СТАКАН RUB → USDT* _(обновлено {dt})_\n\n"
                 f"*RAPIRA*\n🇷🇺Цена RUB\t\tОбъём USDT\n{normalize_rapira_data(r_ask)}\n\n"
                 f"*GRINEX*\n🇷🇺Цена RUB\t\tОбъём USDT\n{normalize_grinex_data(g_ask)}\n\n"
             )
+            keyboard = [[InlineKeyboardButton("🔄 Обновить", callback_data="refresh_rub")]]
+
         else:  # won
             tv_req = get_courses_from_tv()
             tv_msg = tv_req["course"]
             tv_time = datetime.fromisoformat(tv_req["time"]).strftime("%d.%m %H:%M UTC")
-
             msg = f"🇰🇷 *КУРС USDT → KRW* _(обновлено {tv_time})_\n{tv_msg}"
+            keyboard = [[InlineKeyboardButton("🔄 Обновить", callback_data="refresh_won")]]
 
-        await query.message.reply_text(msg,
-                                        parse_mode="Markdown",
-                                        disable_web_page_preview=True)
+        await query.message.reply_text(
+            msg,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+            disable_web_page_preview=True
+        )
         return
 
     # === 3. Обновление валютной пары (EURUSD и т.д.) ===
@@ -100,12 +111,17 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"1 {base} = {result['rate']:.5f} {quote}\n"
                 f"_(обновлено {dt})_ через currencylayer.com"
             )
-            await query.message.reply_text(msg,
-                                            parse_mode="Markdown",
-                                            disable_web_page_preview=True)
+            keyboard = [[InlineKeyboardButton("🔄 Обновить курс", callback_data=f"refresh_{pair}_{amount}")]]
+            await query.message.reply_text(
+                msg,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode="Markdown",
+                disable_web_page_preview=True
+            )
         except Exception as e:
-            await query.message.reply_text(f"⚠ Ошибка при обновлении курса: {e}")
+            await query.message.reply_text(f"⚠️ Ошибка при обновлении курса: {e}")
         return
+
 
 
 async def cancel_transaction_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -117,8 +133,13 @@ async def cancel_transaction_callback(update: Update, context: ContextTypes.DEFA
         if not data.startswith("cancel_"):
             return
 
+        user_id = query.from_user.id
+
         transaction_id = data.split("_", 1)[1]
         logger.info(f"[transaction_id]: {transaction_id}")
+
+        user_by = telegram_user_handler.get_one(id=user_id)
+
         # === 1. Получаем транзакцию ===
         transaction = transaction_handler.get_one(id=transaction_id)
         if not transaction:
@@ -148,23 +169,26 @@ async def cancel_transaction_callback(update: Update, context: ContextTypes.DEFA
             updates={"user_request": f"[Отмена] {transaction.user_request}"},
         )
 
-        # === 5. Обновляем сообщение ===
-        formatted_amount = f"{transaction.amount:,.{account.decimals}f}".replace(",", "’")
+        # === 5. Форматируем ответ ===
+        sign = "−" if transaction.amount >= 0 else "+"
+        formatted_amount_abs = f"{abs(transaction.amount):,.{account.decimals}f}".replace(",", "’")
         formatted_balance = f"{new_balance:,.{account.decimals}f}".replace(",", "’")
 
         cancel_time = datetime.now().strftime("%d.%m %H:%M")
         msg = (
-            f"❌ Отменено {cancel_time}\n"
-            f"−{formatted_amount}\n"
+            f"❌ Отменено {cancel_time} by @{user_by.telegram_tag}\n"
+            f"{sign}{formatted_amount_abs}\n"
             f"Баланс: {formatted_balance} {account.account_name.upper()}\n"
         )
 
-        await query.edit_message_text(msg, parse_mode="Markdown", reply_markup=None)
-        await query.message.reply_text(msg, parse_mode="Markdown", disable_web_page_preview=True)
+        # 6. Редактируем исходное сообщение и добавляем реплай
+        await query.edit_message_text(msg, parse_mode="HTML", reply_markup=None)
+        await query.message.reply_text(msg, parse_mode="HTML", disable_web_page_preview=True)
 
     except Exception as e:
         logger.error(f"Ошибка при отмене транзакции: {e}")
         await query.edit_message_text("⚠️ Ошибка при отмене транзакции.")
+
 
 
 async def reconciliation_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
