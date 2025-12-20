@@ -160,6 +160,7 @@ async def cancel_transaction_callback(update: Update, context: ContextTypes.DEFA
         )
 
         await query.edit_message_text(msg, parse_mode="Markdown", reply_markup=None)
+        await query.message.reply_text(msg, parse_mode="Markdown", disable_web_page_preview=True)
 
     except Exception as e:
         logger.error(f"Ошибка при отмене транзакции: {e}")
