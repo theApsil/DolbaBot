@@ -17,6 +17,7 @@ from .commands import (help_command,
                        add_money_command,
                        reconciliation_command,
                        delete_account_command,
+                       all_chats_reconciliation_command,
                        )
 from db.handlers.model_handlers import (transaction_handler,
                                         bank_account_handler,
@@ -27,6 +28,7 @@ from utils.logger import logger
 from dto.transaction import TransactionDTO
 from middlewares.user_exist_middleware import user_middleware
 from middlewares.group_exist_middleware import group_middleware
+from middlewares.user_group_exist_middleware import user_group_middleware
 
 exchange = CurrencyLayerExchange()
 
@@ -312,8 +314,9 @@ async def create_bank_statement(update: Update, context: ContextTypes.DEFAULT_TY
 
 # === Регистрация всех хэндлеров ===
 def register_handlers(app):
-    app.add_handler(TypeHandler(object, group_middleware), group=-2)
-    app.add_handler(TypeHandler(object, user_middleware), group=-1)
+    app.add_handler(TypeHandler(object, group_middleware), group=-3)
+    app.add_handler(TypeHandler(object, user_middleware), group=-2)
+    app.add_handler(TypeHandler(object, user_group_middleware), group=-1)
 
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("help", help_command))
@@ -333,6 +336,7 @@ def register_handlers(app):
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(добавь|add)\b", re.IGNORECASE)), add_account_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(сверь|reconciliation)\b", re.IGNORECASE)), reconciliation_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(удали|delete)\b", re.IGNORECASE)), delete_account_command))
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(сверьвсё|reconsilationall)\b", re.IGNORECASE)), all_chats_reconciliation_command))
 
     app.add_handler(CallbackQueryHandler(refresh_callback, pattern=r"^refresh_"))
     app.add_handler(CallbackQueryHandler(cancel_transaction_callback, pattern=r"^cancel_"))

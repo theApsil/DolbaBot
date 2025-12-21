@@ -14,7 +14,10 @@ from utils.logger import logger
 from db.handlers import (telegram_user_handler,
                          bank_account_handler,
                          telegram_group_handler,
-                         transaction_handler, region_index_handler)
+                         transaction_handler,
+                         region_index_handler,
+                         user_group_handler
+                         )
 from telegram import Update
 
 
@@ -482,6 +485,47 @@ async def reconciliation_command(update: Update, context: ContextTypes.DEFAULT_T
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text("Выберите действие:", reply_markup=reply_markup)
+
+
+# === /сверьвсё ===
+async def all_chats_reconciliation_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+
+    user = telegram_user_handler.get_one(id=user_id)
+
+    if not user.is_admin:
+        await update.message.reply_text("❌У вас нет доступа к этой команде❌")
+        return
+
+    user_group_id_object = user_group_handler.filter_many(user_id=user_id)
+
+    groups_id = [obj.group_id for obj in user_group_id_object]
+
+    groups = telegram_group_handler.filter_many(id=groups_id)
+    accounts = bank_account_handler.filter_many(group_id=groups_id)
+
+    groups_dict = {
+        group.id: group for group in groups
+    }
+
+    accounts_sorted = sorted(accounts, key=lambda account: account.group_id, reverse=False)
+
+    msg = ""
+    msg_lines = []
+    used_groups = []
+    for account in accounts_sorted:
+        if account.group_id not in used_groups:
+            msg_lines.append(f"\n`Чат: {groups_dict[account.group_id].name}`")
+            used_groups.append(account.group_id)
+
+        formatted_amount = f"{account.amount:.{account.decimals}f}"
+        line = f"{formatted_amount} {account.account_name.upper()}"
+        padded_line = line.rjust(30)
+        msg_lines.append(f"`{padded_line}`")
+
+        msg = "\n".join(msg_lines)
+
+    await update.message.reply_text(msg, parse_mode="Markdown")
 
 
 # === /удалить ===

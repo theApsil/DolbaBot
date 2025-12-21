@@ -5,6 +5,7 @@ from db.handlers.model_handlers import (
     region_index_handler,
     transaction_handler,
     transaction_history_handler,
+    user_group_handler
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "region_index_handler",
     "transaction_handler",
     "transaction_history_handler",
+    "user_group_handler",
 ]

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import joinedload
-from db.models import RegionIndex, Group, User, BankAccount, Transaction, TransactionHistory
+from db.models import RegionIndex, Group, User, BankAccount, Transaction, TransactionHistory, UserGroup
 from db.handlers.base_handler import BaseHandler
 from utils.logger import logger
 from db.mixins import JoinableMixin
@@ -88,9 +88,14 @@ class TransactionHistoryHandler(JoinableMixin, BaseHandler):
     ]
 
 
+class UserGroupHandler(BaseHandler):
+    model = UserGroup
+
+
 region_index_handler = RegionIndexHandler()
 telegram_group_handler = TelegramGroupHandler()
 telegram_user_handler = TelegramUserHandler()
 bank_account_handler = BankAccountHandler()
 transaction_handler = TransactionHandler()
 transaction_history_handler = TransactionHistoryHandler()
+user_group_handler = UserGroupHandler()
