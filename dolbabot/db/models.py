@@ -27,12 +27,6 @@ class BaseModel(Base):
         nullable=False
     )
 
-# user_group = Table(
-#     "user_group",
-#     Base.metadata,
-#     Column("user_id", Integer, ForeignKey("user.id", ondelete="CASCADE"), primary_key=True),
-#     Column("group_id", Integer, ForeignKey("group.id", ondelete="CASCADE"), primary_key=True),
-# )
 
 class UserGroup(Base):
     __tablename__ = "user_group"
@@ -63,6 +57,7 @@ class Group(BaseModel):
     id = Column(BigInteger, primary_key=True)
     name = Column(String)
     telegram_tag = Column(String)
+    group_tag = Column(String)
 
     users = relationship("User", secondary="user_group", back_populates="groups", passive_deletes=True)
     bank_accounts = relationship("BankAccount", back_populates="group", cascade="all, delete-orphan")
