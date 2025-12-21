@@ -336,7 +336,7 @@ def register_handlers(app):
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(добавь|add)\b", re.IGNORECASE)), add_account_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(сверь|reconciliation)\b", re.IGNORECASE)), reconciliation_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(удали|delete)\b", re.IGNORECASE)), delete_account_command))
-    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(сверьвсё|reconsilationall)\b", re.IGNORECASE)), all_chats_reconciliation_command))
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(сверьвсе|reconsilationall)\b", re.IGNORECASE)), all_chats_reconciliation_command))
 
     app.add_handler(CallbackQueryHandler(refresh_callback, pattern=r"^refresh_"))
     app.add_handler(CallbackQueryHandler(cancel_transaction_callback, pattern=r"^cancel_"))
