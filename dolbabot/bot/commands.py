@@ -517,10 +517,12 @@ async def all_chats_reconciliation_command(update: Update, context: ContextTypes
     msg = ""
     msg_lines = []
     used_groups = []
+
     for account in accounts_sorted:
         if account.group_id not in used_groups:
             msg_lines.append(f"\n`Чат: {groups_dict[account.group_id].name}`")
-            msg_lines.append(f"`Тег: {str(groups_dict[account.group_id].group_tag) if groups_dict[account.group_id].group_tag else "-"}`")
+            tag = str(groups_dict[account.group_id].group_tag) if groups_dict[account.group_id].group_tag else "-"
+            msg_lines.append(f"`Тег: {tag}`")
             used_groups.append(account.group_id)
 
         formatted_amount = f"{account.amount:.{account.decimals}f}"
