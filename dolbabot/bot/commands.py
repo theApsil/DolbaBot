@@ -14,7 +14,10 @@ from utils.logger import logger
 from db.handlers import (telegram_user_handler,
                          bank_account_handler,
                          telegram_group_handler,
-                         transaction_handler, region_index_handler)
+                         transaction_handler,
+                         region_index_handler,
+                         user_group_handler
+                         )
 from telegram import Update
 
 
@@ -35,6 +38,10 @@ HELP_TEXT = """
  - /<счет> <выражение> - добавить на счет результат выражения
  - /удали <счет> - удалить счет
  - /сверь - запустить процедуру сверки счета
+Команды администратора:
+ - /сверьвсе - показывает сводку балансов по всем счетам всех групп, в которых состоит администратор
+ - /группы - показывает группы, в которых состоит пользователь, который вызвал данную команду
+ - /группа <ID> <Тег> - меняет тег группе, ID которой указан в команде
 """
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -484,6 +491,48 @@ async def reconciliation_command(update: Update, context: ContextTypes.DEFAULT_T
     await update.message.reply_text("Выберите действие:", reply_markup=reply_markup)
 
 
+# === /сверьвсе ===
+async def all_chats_reconciliation_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+
+    is_admin = context.user_data.get("user").get("is_admin")
+
+    if not is_admin:
+        await update.message.reply_text("❌У вас нет доступа к этой команде❌")
+        return
+
+    user_group_id_object = user_group_handler.filter_many(user_id=user_id)
+
+    groups_id = [obj.group_id for obj in user_group_id_object]
+
+    groups = telegram_group_handler.filter_many(id=groups_id)
+    accounts = bank_account_handler.filter_many(group_id=groups_id)
+
+    groups_dict = {
+        group.id: group for group in groups
+    }
+
+    accounts_sorted = sorted(accounts, key=lambda account: account.group_id, reverse=False)
+
+    msg = ""
+    msg_lines = []
+    used_groups = []
+    for account in accounts_sorted:
+        if account.group_id not in used_groups:
+            msg_lines.append(f"\n`Чат: {groups_dict[account.group_id].name}`")
+            msg_lines.append(f"`Тег: {str(groups_dict[account.group_id].group_tag) if groups_dict[account.group_id].group_tag else "—"}`")
+            used_groups.append(account.group_id)
+
+        formatted_amount = f"{account.amount:.{account.decimals}f}"
+        line = f"{formatted_amount} {account.account_name.upper()}"
+        padded_line = line.rjust(30)
+        msg_lines.append(f"`{padded_line}`")
+
+        msg = "\n".join(msg_lines)
+
+    await update.message.reply_text(msg, parse_mode="Markdown")
+
+
 # === /удалить ===
 async def delete_account_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -520,6 +569,99 @@ async def delete_account_command(update: Update, context: ContextTypes.DEFAULT_T
         logger.error(f"Ошибка при запросе подтверждения удаления счёта: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка при запросе подтверждения удаления счёта.")
 
+
+async def get_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+
+    is_admin = context.user_data.get("user").get("is_admin")
+
+    if not is_admin:
+        await update.message.reply_text("❌У вас нет доступа к этой команде❌")
+        return
+
+    user_group_id_object = user_group_handler.filter_many(user_id=user_id)
+
+    groups_id = [obj.group_id for obj in user_group_id_object]
+
+    groups = telegram_group_handler.filter_many(id=groups_id)
+
+    msg_lines = ["<b>Список групп:</b>", "<pre>", f"{'ID':<12} | {'Группа':<30} | {'Тег':<10}", "-" * 59]
+
+    for group in groups:
+        id = group.id
+        name = str(group.name) if group.name else "Без названия"
+        tag = str(group.group_tag) if group.group_tag else "—"
+        msg_lines.append(f"{id:<12} | {name:<30} | {tag:<10}")
+
+    msg_lines.append("</pre>")
+    msg = "\n".join(msg_lines)
+
+    await update.message.reply_text(msg, parse_mode="HTML")
+
+
+async def change_group_tag_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+
+    groups_id = [group.group_id for group in user_group_handler.filter_many(user_id=user_id)]
+
+    is_admin = context.user_data.get("user").get("is_admin")
+
+    if not is_admin:
+        await update.message.reply_text("❌У вас нет доступа к этой команде❌")
+        return
+
+    text = update.message.text.split()
+    args = text[1:]
+
+    if len(args) != 2:
+        await update.message.reply_text("❌ Укажите ID группы и новый тег. Пример: /группа -3145555 #New_Tag")
+        return
+
+    if len(args[1]) > 150:
+        await update.message.reply_text("❌ Нельзя создать тег более 150 символов")
+        return
+
+    if not args[1].startswith("#"):
+        await update.message.reply_text("❌ Тег должен начинаться со знака #")
+        return
+
+    group = telegram_group_handler.get_one(id=args[0])
+
+    if not group:
+        await update.message.reply_text("❌ Такой группы не существует")
+        return
+
+    if int(args[0]) not in groups_id:
+        await update.message.reply_text("❌ Пользователь не состоит в группе, ID которой был введён")
+        return
+
+    keyboard = [
+        [
+            InlineKeyboardButton("✅ Изменить", callback_data=f"group_tag_change_confirm"),
+            InlineKeyboardButton("❌ Отмена", callback_data="group_tag_change_cancel")
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+
+    msg_lines = (
+        f"Вы собираетесь заменить тег у группы *{group.name}*",
+        f"`{group.group_tag} -> {args[1]}`",
+        f"Вы действительно хотите это сделать?",
+    )
+
+    msg = "\n".join(msg_lines)
+
+    message = await update.message.reply_text(msg,
+                                    parse_mode="Markdown",
+                                    reply_markup=reply_markup,
+                                    )
+
+    context.user_data[f'data_for_{message.message_id}'] = {
+        'user_id': user_id,
+        'group_id': group.id,
+        'new_tag': args[1],
+    }
 
 async def error_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(

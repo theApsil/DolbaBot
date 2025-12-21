@@ -17,16 +17,21 @@ from .commands import (help_command,
                        add_money_command,
                        reconciliation_command,
                        delete_account_command,
+                       all_chats_reconciliation_command,
+                       get_groups_command,
+                       change_group_tag_command,
                        )
 from db.handlers.model_handlers import (transaction_handler,
                                         bank_account_handler,
                                         transaction_history_handler,
-                                        telegram_user_handler
+                                        telegram_user_handler,
+                                        telegram_group_handler,
                                         )
 from utils.logger import logger
 from dto.transaction import TransactionDTO
 from middlewares.user_exist_middleware import user_middleware
 from middlewares.group_exist_middleware import group_middleware
+from middlewares.user_group_exist_middleware import user_group_middleware
 
 exchange = CurrencyLayerExchange()
 
@@ -310,19 +315,60 @@ async def create_bank_statement(update: Update, context: ContextTypes.DEFAULT_TY
         await update.callback_query.edit_message_text("⚠️ Произошла ошибка при создании выписки.")
 
 
+async def change_tag_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        query = update.callback_query
+        message_id = query.message.message_id
+
+        await query.answer()
+
+        data = query.data
+        logger.info(f"[DATA]: {data}")
+        # Отмена
+        if data == "group_tag_change_cancel":
+            await query.edit_message_text("❎ Изменение отменено.")
+            return
+
+        # Подтверждение
+        if data == "group_tag_change_confirm":
+            data_key = f'data_for_{message_id}'
+            stored_data = context.user_data.get(data_key)
+
+            if not stored_data:
+                await query.message.reply_text("❌ Вы не можете подтвердить, так как сообщение вызвано не вами")
+                return
+
+            tag = str(stored_data.get("new_tag"))
+            group_id = stored_data.get("group_id")
+            new_group = telegram_group_handler.update(
+                filters={"id": group_id},
+                updates={"group_tag": tag},
+            )
+
+            await query.edit_message_text(
+                f"✅ Тег группы *{new_group.name}* изменён.\n`Новый тег: {tag}`",
+                parse_mode="Markdown"
+            )
+
+    except Exception as e:
+        logger.error(f"Ошибка при подтверждении изменения тега группы: {e}")
+        await update.callback_query.edit_message_text("⚠️ Произошла ошибка при изменении тега группы.")
+
+
 # === Регистрация всех хэндлеров ===
 def register_handlers(app):
-    app.add_handler(TypeHandler(object, group_middleware), group=-2)
-    app.add_handler(TypeHandler(object, user_middleware), group=-1)
+    app.add_handler(TypeHandler(object, group_middleware), group=-3)
+    app.add_handler(TypeHandler(object, user_middleware), group=-2)
+    app.add_handler(TypeHandler(object, user_group_middleware), group=-1)
 
-    app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("kurs", kurs_command))
-    app.add_handler(CommandHandler("add", add_account_command))
-    app.add_handler(CommandHandler("give", get_accounts_command))
-    app.add_handler(CommandHandler("money", add_money_command))
-    app.add_handler(CommandHandler("reconciliation", reconciliation_command))
-    app.add_handler(CommandHandler("delete", delete_account_command))
+    # app.add_handler(CommandHandler("start", start_command))
+    # app.add_handler(CommandHandler("help", help_command))
+    # app.add_handler(CommandHandler("kurs", kurs_command))
+    # app.add_handler(CommandHandler("add", add_account_command))
+    # app.add_handler(CommandHandler("give", get_accounts_command))
+    # app.add_handler(CommandHandler("money", add_money_command))
+    # app.add_handler(CommandHandler("reconciliation", reconciliation_command))
+    # app.add_handler(CommandHandler("delete", delete_account_command))
 
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(старт|start)\b", re.IGNORECASE)), start_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(помоги|help)\b", re.IGNORECASE)), help_command))
@@ -333,11 +379,16 @@ def register_handlers(app):
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(добавь|add)\b", re.IGNORECASE)), add_account_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(сверь|reconciliation)\b", re.IGNORECASE)), reconciliation_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(удали|delete)\b", re.IGNORECASE)), delete_account_command))
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(сверьвсе|reconsilationall)\b", re.IGNORECASE)), all_chats_reconciliation_command))
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(группы|groups)\b", re.IGNORECASE)), get_groups_command))
+    app.add_handler(
+        MessageHandler(filters.Regex(re.compile(r"^/(группа|change_group_tag)\b", re.IGNORECASE)), change_group_tag_command))
 
     app.add_handler(CallbackQueryHandler(refresh_callback, pattern=r"^refresh_"))
     app.add_handler(CallbackQueryHandler(cancel_transaction_callback, pattern=r"^cancel_"))
     app.add_handler(CallbackQueryHandler(reconciliation_callback, pattern=r"^reconcile_"))
     app.add_handler(CallbackQueryHandler(delete_account_callback, pattern=r"^(account_delete_)"))
     app.add_handler(CallbackQueryHandler(create_bank_statement, pattern=r"^(statement_)"))
+    app.add_handler(CallbackQueryHandler(change_tag_callback, pattern=r"^(group_tag_change_)"))
 
     app.add_handler(MessageHandler(filters.Regex(r"^/[^a-zA-Z]"), calc_command))

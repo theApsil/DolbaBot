@@ -57,9 +57,21 @@ class BaseHandler:
             session.close()
 
     def filter_many(self, **filters):
+        """Фильтрация с поддержкой оператора IN для массивов"""
         session = self.get_session()
         try:
-            objs = session.query(self.model).filter_by(**filters).all()
+            query = session.query(self.model)
+
+            for key, value in filters.items():
+                if isinstance(value, (list, tuple, set)):
+                    # Используем IN для массивов
+                    column = getattr(self.model, key)
+                    query = query.filter(column.in_(value))
+                else:
+                    # Обычный фильтр
+                    query = query.filter(getattr(self.model, key) == value)
+
+            objs = query.all()
             session.expunge_all()
             return objs
         except Exception as e:

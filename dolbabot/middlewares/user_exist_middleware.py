@@ -51,6 +51,7 @@ async def user_middleware(update, context):
     context.user_data["user"] = {
         "id": tg_user.id,
         "name": db_user.name,
-        "telegram_tag": db_user.telegram_tag
+        "telegram_tag": db_user.telegram_tag,
+        "is_admin": db_user.is_admin,
     }
     context.user_data["last_user_check"] = datetime.now()

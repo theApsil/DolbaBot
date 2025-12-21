@@ -27,12 +27,12 @@ class BaseModel(Base):
         nullable=False
     )
 
-user_group = Table(
-    "user_group",
-    Base.metadata,
-    Column("user_id", Integer, ForeignKey("user.id", ondelete="CASCADE"), primary_key=True),
-    Column("group_id", Integer, ForeignKey("group.id", ondelete="CASCADE"), primary_key=True),
-)
+
+class UserGroup(Base):
+    __tablename__ = "user_group"
+
+    user_id = Column(BigInteger, ForeignKey("user.id", ondelete="CASCADE"), primary_key=True)
+    group_id = Column(BigInteger, ForeignKey("group.id", ondelete="CASCADE"), primary_key=True)
 
 
 class User(BaseModel):
@@ -42,11 +42,13 @@ class User(BaseModel):
     name = Column(String)
     telegram_tag = Column(String)
 
-    groups = relationship("Group", secondary=user_group, back_populates="users", passive_deletes=True)
+    groups = relationship("Group", secondary="user_group", back_populates="users", passive_deletes=True)
 
     bank_accounts = relationship("BankAccount", back_populates="user", cascade="all, delete-orphan")
     transactions = relationship("Transaction", back_populates="user", passive_deletes=True)
     transaction_history = relationship("TransactionHistory", back_populates="user", passive_deletes=True)
+
+    is_admin = Column(Boolean, default=False)
 
 
 class Group(BaseModel):
@@ -55,8 +57,9 @@ class Group(BaseModel):
     id = Column(BigInteger, primary_key=True)
     name = Column(String)
     telegram_tag = Column(String)
+    group_tag = Column(String)
 
-    users = relationship("User", secondary=user_group, back_populates="groups", passive_deletes=True)
+    users = relationship("User", secondary="user_group", back_populates="groups", passive_deletes=True)
     bank_accounts = relationship("BankAccount", back_populates="group", cascade="all, delete-orphan")
 
 
