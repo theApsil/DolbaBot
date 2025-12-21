@@ -520,7 +520,7 @@ async def all_chats_reconciliation_command(update: Update, context: ContextTypes
     for account in accounts_sorted:
         if account.group_id not in used_groups:
             msg_lines.append(f"\n`Чат: {groups_dict[account.group_id].name}`")
-            msg_lines.append(f"`Тег: {str(groups_dict[account.group_id].group_tag) if groups_dict[account.group_id].group_tag else "—"}`")
+            msg_lines.append(f"`Тег: {str(groups_dict[account.group_id].group_tag) if groups_dict[account.group_id].group_tag else "-"}`")
             used_groups.append(account.group_id)
 
         formatted_amount = f"{account.amount:.{account.decimals}f}"
@@ -590,7 +590,7 @@ async def get_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     for group in groups:
         id = group.id
         name = str(group.name) if group.name else "Без названия"
-        tag = str(group.group_tag) if group.group_tag else "—"
+        tag = str(group.group_tag) if group.group_tag else "-"
         msg_lines.append(f"{id:<12} | {name:<30} | {tag:<10}")
 
     msg_lines.append("</pre>")
