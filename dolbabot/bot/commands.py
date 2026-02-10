@@ -34,7 +34,7 @@ HELP_TEXT = """
  - /курс usdt — курс USDT→RUB
  - /курс вона — курс USDT→KRW
  - /(выражение) — калькулятор
- - /дай - вывод всех счетов группы
+ - /b - вывод всех счетов группы
  - /добавь <счет> <кол-во знаков> - добавить счет с названием <счет> и с количеством знаков. Если знаки не указаны - 2
  - /<счет> <выражение> - добавить на счет результат выражения
  - /удали <счет> - удалить счет
@@ -387,12 +387,13 @@ async def get_accounts_command(update: Update, context: ContextTypes.DEFAULT_TYP
         chat_id = update.message.chat_id
 
         accounts = bank_account_handler.filter_many(group_id=chat_id)
+        accounts_sorted = sorted(accounts, key=lambda account: (account.group_id, account.account_name), reverse=False)
         if not accounts:
             await update.message.reply_text("У вас пока нет счетов.")
             return
 
         msg_lines = ["`Ваших средств:`"]
-        formatted_lines = account_beautifier(accounts)
+        formatted_lines = account_beautifier(accounts_sorted)
         msg_lines.extend(formatted_lines)
 
         msg = "\n".join(msg_lines)
