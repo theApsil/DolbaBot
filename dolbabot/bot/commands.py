@@ -18,6 +18,7 @@ from db.handlers import (telegram_user_handler,
                          region_index_handler,
                          user_group_handler
                          )
+from utils.account_beautifier import account_beautifier
 from telegram import Update
 
 
@@ -49,6 +50,21 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(HELP_TEXT)
+
+
+async def _wrap_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text.strip()
+    parts = text.split(maxsplit=1)
+
+    command = parts[0].lstrip("/")
+    has_args = len(parts) > 1
+
+    if len(command) == 6 and command.isalpha() and not has_args:
+        await pair_command(update, context)
+        return
+
+    await add_money_command(update, context)
+
 
 # === /курс ===
 async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -212,7 +228,6 @@ async def kurs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                                 parse_mode="Markdown")
                 return
             tether = float(new_args[1])
-            # TODO: Нормализация сопоставления городов и их индекса
 
             jpy_msg = jpy(actual_tether, city, tether, index)
             msg = (
@@ -377,11 +392,8 @@ async def get_accounts_command(update: Update, context: ContextTypes.DEFAULT_TYP
             return
 
         msg_lines = ["`Ваших средств:`"]
-        for acc in accounts:
-            formatted_amount = f"{acc.amount:.{acc.decimals}f}"
-            line = f"{formatted_amount} {acc.account_name.upper()}"
-            padded_line = line.rjust(30)
-            msg_lines.append(f"`{padded_line}`")
+        formatted_lines = account_beautifier(accounts)
+        msg_lines.extend(formatted_lines)
 
         msg = "\n".join(msg_lines)
         keyboard = [
@@ -407,7 +419,7 @@ async def add_money_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parts = text.split(maxsplit=1)
 
         if len(parts) < 2:
-            await update.message.reply_text("❌ Укажите сумму или выражение. Пример: /usd (12*2)+1/3+0.5%")
+            await error_command(update, context)
             return
 
         account_name = parts[0].replace("/", "").lower()
@@ -417,7 +429,6 @@ async def add_money_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = int(user.id)
         chat_id = update.message.chat_id
 
-        # Проверяем наличие счёта
         account = bank_account_handler.get_one(account_name=account_name, group_id=chat_id)
         if not account:
             await update.message.reply_text(f"⚠️ Счёт {account_name.upper()} не найден.")
@@ -508,29 +519,26 @@ async def all_chats_reconciliation_command(update: Update, context: ContextTypes
     groups = telegram_group_handler.filter_many(id=groups_id)
     accounts = bank_account_handler.filter_many(group_id=groups_id)
 
+    accounts_sorted = sorted(accounts, key=lambda account: (account.group_id, account.account_name), reverse=False)
+    groups_sorted = sorted(groups, key=lambda group: group.name.lower(), reverse=False)
     groups_dict = {
-        group.id: group for group in groups
+        group.id: (group, [acc for acc in accounts_sorted if acc.group_id == group.id]) for group in groups_sorted
     }
 
-    accounts_sorted = sorted(accounts, key=lambda account: account.group_id, reverse=False)
-
-    msg = ""
     msg_lines = []
-    used_groups = []
+    for i, (group_id, group) in enumerate(groups_dict.items()):
+        if i > 0:
+            msg_lines.append("")
 
-    for account in accounts_sorted:
-        if account.group_id not in used_groups:
-            msg_lines.append(f"\n`Чат: {groups_dict[account.group_id].name}`")
-            tag = str(groups_dict[account.group_id].group_tag) if groups_dict[account.group_id].group_tag else "-"
-            msg_lines.append(f"`Тег: {tag}`")
-            used_groups.append(account.group_id)
+        msg_lines.append(f"`Чат: {group[0].name}`")
+        tag = str(group[0].group_tag) if group[0].group_tag else "-"
+        msg_lines.append(f"`Тег: {tag}`")
 
-        formatted_amount = f"{account.amount:.{account.decimals}f}"
-        line = f"{formatted_amount} {account.account_name.upper()}"
-        padded_line = line.rjust(30)
-        msg_lines.append(f"`{padded_line}`")
+        formatted_lines = account_beautifier(group[1])
+        msg_lines.extend(formatted_lines)
 
-        msg = "\n".join(msg_lines)
+    msg = "\n".join(msg_lines)
+
 
     await update.message.reply_text(msg, parse_mode="Markdown")
 
