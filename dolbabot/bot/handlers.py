@@ -20,6 +20,7 @@ from .commands import (help_command,
                        all_chats_reconciliation_command,
                        get_groups_command,
                        change_group_tag_command,
+                       _wrap_command
                        )
 from db.handlers.model_handlers import (transaction_handler,
                                         bank_account_handler,
@@ -128,7 +129,6 @@ async def refresh_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 
-
 async def cancel_transaction_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -193,7 +193,6 @@ async def cancel_transaction_callback(update: Update, context: ContextTypes.DEFA
     except Exception as e:
         logger.error(f"Ошибка при отмене транзакции: {e}")
         await query.edit_message_text("⚠️ Ошибка при отмене транзакции.")
-
 
 
 async def reconciliation_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -372,9 +371,8 @@ def register_handlers(app):
 
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(старт|start)\b", re.IGNORECASE)), start_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(помоги|help)\b", re.IGNORECASE)), help_command))
-    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(дай|give)\b", re.IGNORECASE)), get_accounts_command))
-    app.add_handler(MessageHandler(filters.Regex(r"^/[a-zA-Z]{6}\b"), pair_command))
-    app.add_handler(MessageHandler(filters.Regex(r"^/[a-zA-Z]{1,50}\b"), add_money_command))
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(дай|b)\b", re.IGNORECASE)), get_accounts_command))
+    app.add_handler(MessageHandler(filters.Regex(r"^/[a-zA-Z]{1,50}\b"), _wrap_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(курс|kurs)\b", re.IGNORECASE)), kurs_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(добавь|add)\b", re.IGNORECASE)), add_account_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(сверь|reconciliation)\b", re.IGNORECASE)), reconciliation_command))
