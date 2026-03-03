@@ -371,7 +371,7 @@ def register_handlers(app):
 
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(старт|start)\b", re.IGNORECASE)), start_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(помоги|help)\b", re.IGNORECASE)), help_command))
-    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(дай|b)\b", re.IGNORECASE)), get_accounts_command))
+    app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(дай|bl)\b", re.IGNORECASE)), get_accounts_command))
     app.add_handler(MessageHandler(filters.Regex(r"^/[a-zA-Z]{1,50}\b"), _wrap_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(курс|kurs)\b", re.IGNORECASE)), kurs_command))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r"^/(добавь|add)\b", re.IGNORECASE)), add_account_command))
