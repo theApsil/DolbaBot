@@ -472,6 +472,18 @@ async def add_money_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         formatted_amount_abs = f"{abs(amount):,.{decimals}f}".replace(",", "’")
         formatted_balance = f"{new_balance:,.{decimals}f}".replace(",", "’")
 
+        callback_data = f"cancel_{transaction.id}"
+
+        logger.info(
+            f"callback_data={callback_data!r}, "
+            f"len={len(callback_data.encode('utf-8'))}"
+        )
+
+        if len(callback_data.encode("utf-8")) > 64:
+            callback_data = f"cancel_short_{transaction.id}"
+            logger.error(f"Слишком длинный callback_data: {callback_data!r}")
+
+
         keyboard = [
             [InlineKeyboardButton("❌ Отменить", callback_data=f"cancel_{transaction.id}")]
         ]
@@ -482,10 +494,10 @@ async def add_money_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Баланс: {formatted_balance} {account_name.upper()}"
         )
 
-        await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
+        await update.message.reply_text(msg, reply_markup=reply_markup)
 
     except Exception as e:
-        logger.error(f"Ошибка при добавлении средств: {e}")
+        logger.exception(f"Ошибка при добавлении средств: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка при добавлении средств.")
 
 
