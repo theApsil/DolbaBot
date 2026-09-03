@@ -37,6 +37,9 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     healthcheck:
       test: [ "CMD", "pgrep", "-f", "main.py" ]
       interval: 15s
